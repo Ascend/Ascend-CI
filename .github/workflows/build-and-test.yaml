@@ -1,0 +1,16 @@
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  issue_comment:
+    types: [created]
+jobs:
+  repo-sync:
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.comment.body, 'recheck_sync') || github.event_name == 'schedule' }}
+    steps:
+      - uses: TG908/fork-sync@v1.8
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: microsoft
+          head: main
+          base: upstream
