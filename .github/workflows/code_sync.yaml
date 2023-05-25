@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: TG908/fork-sync@v1.8
         with:
-          github_token: ${{ secrets.TOKEN }}
+          token: ${{ secrets.TOKEN }}
           owner: microsoft
           head: main
           base: upstream
