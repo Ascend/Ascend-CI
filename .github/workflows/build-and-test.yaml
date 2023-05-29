@@ -1,0 +1,29 @@
+name: ONNX Runtime daily build and test on openEuler
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  issue_comment:
+    types: [created]
+
+jobs:
+  build-and-test:
+    name: Build and test onnx runtime from source
+    if: ${{ contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' }}
+    runs-on: openEuler20.03
+    steps:
+      - name: Pull latest codes
+        run:
+          sudo su - root -c "pushd /root/Git.d/onnxruntime &&
+          git fetch --all &&
+          git rebase upstream/main &&
+          git submodule update --init --recursive &&
+          git reset --hard HEAD &&
+          git clean -dfx &&
+          popd"
+      - name: Build and test onnx runtime
+        run:
+          sudo su - root -c "pushd /root/Git.d/onnxruntime &&
+          source /usr/local/Ascend/ascend-toolkit/set_env.sh &&
+          ./build.sh --allow_running_as_root --config RelWithDebInfo --build_shared_lib --parallel --use_cann --build_wheel &&
+          popd"
