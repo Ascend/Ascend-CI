@@ -1,4 +1,4 @@
-name: ONNX Runtime daily build and test on openEuler
+name: Linux NPU(Ascend)
 
 on:
   schedule:
