@@ -18,4 +18,4 @@ The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and
 ### Known Issue
 
 ##### Issue #1 [Open]
-This [PR](https://github.com/microsoft/onnxruntime/pull/15833) refactored the ExecutionProvider API for memory management, and broke the CANN EP build. This has been fixed by this [PR](https://github.com/microsoft/onnxruntime/pull/16490) and is waiting for upstream merge.
+This [PR](https://github.com/microsoft/onnxruntime/pull/15833) refactored the ExecutionProvider API for memory management, and broke the CANN EP build. This has been fixed by this [PR](https://github.com/microsoft/onnxruntime/pull/16490), but is waiting for upstream merge.
