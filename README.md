@@ -17,9 +17,9 @@ The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and
 
 ### Known Issue
 
-##### Issue #2 [Open] 
-Update on 2023.07.17  
-PR [#16506](https://github.com/microsoft/onnxruntime/pull/16506) changed the public constructor function `MLFloat16(uint16_t x)` to private, and added a public function `MLFloat16::FromBits(uint16_t x)` in the file `include/onnxruntime/core/framework/float16.h`, which broke the CANN CI. This has been fixed by PR [#16733](https://github.com/microsoft/onnxruntime/pull/16733) by replacing the constructor function `MLFloat16()` with the public member function `FromBits()` in the file `onnxruntime/core/providers/cann/cann_common.cc`, but is waiting for upstream merge.
+##### Issue #2 [Closed] 
+Update on 2023.07.18  
+PR [#16506](https://github.com/microsoft/onnxruntime/pull/16506) changed the public constructor function `MLFloat16(uint16_t x)` to private, and added a public function `MLFloat16::FromBits(uint16_t x)` in the file `include/onnxruntime/core/framework/float16.h`, which broke the CANN CI. This has been fixed by PR [#16733](https://github.com/microsoft/onnxruntime/pull/16733) by replacing the constructor function `MLFloat16()` with the public member function `FromBits()` in the file `onnxruntime/core/providers/cann/cann_common.cc`~~, but is waiting for upstream merge~~ and this PR has been merged into upstream.
 
 ##### Issue #1 [Closed] 
 Update on 2023.07.06  
