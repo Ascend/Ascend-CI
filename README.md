@@ -1,6 +1,7 @@
-# ONNXRuntime Ascend CI system
+# Ascend CI system
+This is the repo to run CI jobs with Ascend backend.
 
-This is the repo to run ONNXRuntime CI jobs with Ascend backend.
+## ONNXRuntime Ascend CI
 The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and will be run and tested daily with Ascend related.
 
 ------------------------------------------------------------
@@ -28,3 +29,6 @@ This [PR](https://github.com/microsoft/onnxruntime/pull/15833) refactored the Ex
 ##### Issue #0 [Closed]
 Update on 2023.06.08  
 This [PR](https://github.com/microsoft/onnxruntime/pull/14731) introduced a missing registration of CANN Identity operator for version greater than 14. It has been fixed in this [PR](https://github.com/microsoft/onnxruntime/pull/16210).
+
+## Pytorch Ascend CI
+TBD
