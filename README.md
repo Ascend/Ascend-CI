@@ -18,6 +18,10 @@ The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and
 
 ### Known Issue
 
+##### Issue # 3 [Closed]
+Update on 2024.3.16  
+PR [#17365](https://github.com/microsoft/onnxruntime/pull/17365) avioded using patchelf but lost `cann_dependencies`, PR [#19929](https://github.com/microsoft/onnxruntime/pull/19929) adds `cann_dependencies` to avoid require cann libraries when repairing wheel.
+
 ##### Issue #2 [Closed] 
 Update on 2023.07.18  
 PR [#16506](https://github.com/microsoft/onnxruntime/pull/16506) changed the public constructor function `MLFloat16(uint16_t x)` to private, and added a public function `MLFloat16::FromBits(uint16_t x)` in the file `include/onnxruntime/core/framework/float16.h`, which broke the CANN CI. This has been fixed by PR [#16733](https://github.com/microsoft/onnxruntime/pull/16733) by replacing the constructor function `MLFloat16()` with the public member function `FromBits()` in the file `onnxruntime/core/providers/cann/cann_common.cc`~~, but is waiting for upstream merge~~ and this PR has been merged into upstream.
