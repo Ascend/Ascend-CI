@@ -1,6 +1,9 @@
 # Ascend CI system
 This is the repo to run CI jobs with Ascend backend.
 
+- [CI 看护日志](https://github.com/Ascend/Ascend-CI/blob/main/docs/ONNXRuntime_CI%E7%9C%8B%E6%8A%A4%E6%97%A5%E5%BF%97.md)
+- [ONNXRuntime 发包指导](https://github.com/cosdt/Quora/issues/8)
+
 ## ONNXRuntime Ascend CI
 The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and will be run and tested daily with Ascend related.
 
@@ -18,8 +21,14 @@ The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and
 
 ### Known Issue
 
-##### Issue # 3 [Closed]
-Update on 2024.3.16  
+##### Issuse #4 [Opened]
+Update on 2023.03.26  
+New provider option: flag of `dump_om_model`.  
+When building an onnx model with CANN EP, the intermediate OM(offline model for Ascend NPU) is automatically saved. There are some users don't want to dump OM when resources are limited.  
+PR [#20075](https://github.com/microsoft/onnxruntime/pull/20075) will resovle this situation with `dump_om_model=False`
+
+##### Issue #3 [Closed]
+Update on 2024.03.16  
 PR [#17365](https://github.com/microsoft/onnxruntime/pull/17365) avioded using patchelf but lost `cann_dependencies`, PR [#19929](https://github.com/microsoft/onnxruntime/pull/19929) adds `cann_dependencies` to avoid require cann libraries when repairing wheel.
 
 ##### Issue #2 [Closed] 
