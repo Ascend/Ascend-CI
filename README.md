@@ -25,7 +25,8 @@ The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and
 Update on 2023.03.26  
 New provider option: flag of `dump_om_model`.  
 When building an onnx model with CANN EP, the intermediate OM(offline model for Ascend NPU) is automatically saved. There are some users don't want to dump OM when resources are limited.  
-PR [#20075](https://github.com/microsoft/onnxruntime/pull/20075) will resovle this situation with `dump_om_model=False`
+PR [#20075](https://github.com/microsoft/onnxruntime/pull/20075) has resovled this situation with `dump_om_model=False`.  
+PR [#20138](https://github.com/microsoft/onnxruntime/pull/20138) for the doc update.
 
 ##### Issue #3 [Closed]
 Update on 2024.03.16  
