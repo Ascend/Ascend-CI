@@ -323,5 +323,5 @@ ONNXRuntime Execution Provider本身还要支持以下功能：
 |  2022.07           | 完成框架及核心代码开发，向社区提交PR | Done |
 |  2022.10           | 完成框架及核心代码合入，发布正式支持昇腾的新release | Done |
 |  2022.12           | 不断优化CANN后端，补齐关键功能 | Done |
-|  2023.06           | 推动ONNXRuntime社区支持基于openEuler的昇腾CI，保证昇腾持续可用 | Working in progress |
-|  2023.12           | 昇腾后端持续看护，不断优化性能，及时闭环用户提出的问题及新特性需求 | Planning |
+|  2023.06           | 推动ONNXRuntime社区支持基于openEuler的昇腾CI，保证昇腾持续可用 | Done |
+|  2023.12           | 昇腾后端持续看护，不断优化性能，及时闭环用户提出的问题及新特性需求 | Working in progress |
