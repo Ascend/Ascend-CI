@@ -15,12 +15,11 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Set environment
-        run: |
-          source /root/.bashrc && conda activate py38
       - name: Pull latest codes
         run:
-          sudo su - root -c "pushd /root/Git.d/onnxruntime &&
+          sudo su - root -c "source /root/.bashrc && 
+          conda activate py38 &&
+          pushd /root/Git.d/onnxruntime &&
           git fetch --all &&
           git rebase upstream/main &&
           git submodule update --init --recursive &&
