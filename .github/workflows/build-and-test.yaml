@@ -11,7 +11,13 @@ jobs:
     name: Build and test onnx runtime from source
     if: ${{ contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' }}
     runs-on: openEuler20.03
+    defaults:
+      run:
+        shell: bash
     steps:
+      - name: Set environment
+        run: |
+          source /root/.bashrc && conda activate py38
       - name: Pull latest codes
         run:
           sudo su - root -c "pushd /root/Git.d/onnxruntime &&
