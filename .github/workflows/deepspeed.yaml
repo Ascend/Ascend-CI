@@ -77,8 +77,6 @@ jobs:
         pip install -r requirements/requirements_deepspeed.txt
         cd DeepSpeed
         pip install .
-
-        print("run ds_report...")
         ds_report
 
     - name: Python environment
