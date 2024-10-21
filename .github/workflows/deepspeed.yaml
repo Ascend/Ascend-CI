@@ -74,9 +74,9 @@ jobs:
         source /root/.bashrc
         echo "y" | apt-get install git
         git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
-        pip install -r requirements/requirements_deepspeed.txt
         cd DeepSpeed
         pip install .
+        pip install -r ../requirements/requirements_deepspeed.txt       
         ds_report
 
     - name: Python environment
