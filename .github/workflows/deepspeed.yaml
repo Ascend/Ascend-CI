@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - '.github/workflows/huawei-ascend-npu.yml'
+      - '.github/workflows/deepspeed.yaml'
       - 'requirements/**'
   schedule:
     - cron: "0 0 * * *"
   push:
     paths:
-      - '.github/workflows/huawei-ascend-npu.yml'
+      - '.github/workflows/deepspeed.yaml'
 
   
 concurrency:
@@ -90,7 +90,7 @@ jobs:
         echo "y" | apt-get install git
         git clone https://github.com/microsoft/DeepSpeed.git
         cd DeepSpeed
-        pip install .[1bit,npu,autotuning,inf] -i  https://pypi.tuna.tsinghua.edu.cn/simple
+        pip install -r ./requirements/requirements_deepspeed.txt  -i  https://pypi.tuna.tsinghua.edu.cn/simple
         ds_report
 
     - name: Python environment
