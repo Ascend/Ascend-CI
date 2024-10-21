@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - '.github/workflows/deepspeed.yml'
+      - '.github/workflows/deepspeed.yaml'
       - 'requirements/**'
   schedule:
     - cron: "0 0 * * *"
   push:
     paths:
-      - '.github/workflows/deepspeed.yml'
+      - '.github/workflows/deepspeed.yaml'
 
   
 concurrency:
@@ -39,21 +39,13 @@ jobs:
         - /etc/ascend_install.info:/etc/ascend_install.info   
       options: --network host
                --name deepspeed_unit-tests
-               --device /dev/davinci5
+               --device /dev/davinci4
                --device /dev/davinci_manager
                --device /dev/devmm_svm
                --device /dev/hisi_hdc
                --shm-size "20g"
                --entrypoint /bin/bash
-               
-    env:
-      PT_HPU_LAZY_MODE: 0
-      TORCHINDUCTOR_COMPILE_THREADS: 1
-      TEST_LIST: |
-        test_accelerator.py
-        test_autotuning.py
-        test_compression.py
-               
+                              
     steps:
     - uses: actions/checkout@v4
 
@@ -61,10 +53,12 @@ jobs:
       run: |
         npu-smi info
         apt-get update   
+        pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
         source /root/.bashrc
 
-        pip install torch==2.2.0 torchvision==0.17.0 torch_npu==2.2.0 numpy==1.26.4 cloudpickle tornado ml-dtypes -i https://pypi.tuna.tsinghua.edu.cn/simple
+        pip install torch==2.2.0 torchvision==0.17.0 torch_npu==2.2.0 torchaudio==2.2.0 numpy==1.26.4 cloudpickle tornado ml-dtypes
         
+        python --version
         python << EOF 
         if __name__ == '__main__':
             import torch
@@ -74,23 +68,17 @@ jobs:
             print(f"Device Count: {torch.npu.device_count()}")
             print(f"Device Available: {torch.npu.is_available()}")
         EOF
-        
-    # - name: Install transformers
-    #   run: |
-    #     source /root/.bashrc
-    #     echo "y" | apt-get install git
-    #     git clone https://github.com/huggingface/transformers
-    #     cd transformers
-    #     git rev-parse --short HEAD
-    #     pip install . -i https://pypi.tuna.tsinghua.edu.cn/simple
-            
+             
     - name: Install deepspeed
       run: |
         source /root/.bashrc
         echo "y" | apt-get install git
         git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
+        pip install -r requirements/requirements_deepspeed.txt
         cd DeepSpeed
-        pip install .[dev,autotuning] -i  https://pypi.tuna.tsinghua.edu.cn/simple
+        pip install .
+
+        print("run ds_report...")
         ds_report
 
     - name: Python environment

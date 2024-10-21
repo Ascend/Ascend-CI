@@ -44,5 +44,20 @@ This [PR](https://github.com/microsoft/onnxruntime/pull/15833) refactored the Ex
 Update on 2023.06.08  
 This [PR](https://github.com/microsoft/onnxruntime/pull/14731) introduced a missing registration of CANN Identity operator for version greater than 14. It has been fixed in this [PR](https://github.com/microsoft/onnxruntime/pull/16210).
 
+## Deepspeed Ascend CI
+The Deepspeed source code is from `main` branch of `microsoft/deepspeed` and will be run and tested daily with Ascend related.
+
+------------------------------------------------------------
+
+| Key  | Value |
+| :---: | :---: |
+| CPU  | Arrch64 |
+| NPU | Ascend910B |
+| OS | Ubantu |
+| Period | UTC 1200 daily |
+| Branch  | main |
+| Status  | ![Deepspeed](https://github.com/Ascend/Ascend-CI/actions/workflows/deepspeed.yaml/badge.svg) |
+| Recheck By Hand | comment 'recheck' in any issue |
+
 ## Pytorch Ascend CI
 TBD
