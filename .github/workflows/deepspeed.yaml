@@ -89,8 +89,8 @@ jobs:
         source /root/.bashrc
         echo "y" | apt-get install git
         git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
+        pip install -r requirements/requirements_deepspeed.txt  -i  https://pypi.tuna.tsinghua.edu.cn/simple
         cd DeepSpeed
-        pip install -r /requirements/requirements_deepspeed.txt  -i  https://pypi.tuna.tsinghua.edu.cn/simple
         ds_report
 
     - name: Python environment
