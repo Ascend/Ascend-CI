@@ -53,9 +53,10 @@ jobs:
       run: |
         npu-smi info
         apt-get update   
+        pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
         source /root/.bashrc
 
-        pip install torch==2.2.0 torchvision==0.17.0 torch_npu==2.2.0 numpy==1.26.4 cloudpickle tornado ml-dtypes -i https://pypi.tuna.tsinghua.edu.cn/simple
+        pip install torch==2.2.0 torchvision==0.17.0 torch_npu==2.2.0 torchaudio==2.2.0 numpy==1.26.4 cloudpickle tornado ml-dtypes
         
         python --version
         python << EOF 
@@ -67,6 +68,15 @@ jobs:
             print(f"Device Count: {torch.npu.device_count()}")
             print(f"Device Available: {torch.npu.is_available()}")
         EOF
+
+    # - name: Install transformers
+    #   run: |
+    #     source /root/.bashrc
+    #     echo "y" | apt-get install git
+    #     git clone https://github.com/huggingface/transformers
+    #     cd transformers
+    #     git rev-parse --short HEAD
+    #     pip install .
              
     - name: Install deepspeed
       run: |
@@ -75,9 +85,8 @@ jobs:
         git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
         pip install -r requirements/requirements_deepspeed.txt  -i  https://pypi.tuna.tsinghua.edu.cn/simple
         cd DeepSpeed
-        pip install .
-
-        print("run ds_report...")
+        pip install -r ../requirements/requirements_deepspeed.txt
+        pip install .[1bit,autotuning,inf]   
         ds_report
 
     - name: Python environment
@@ -90,7 +99,7 @@ jobs:
         source /root/.bashrc
         unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
         
-        cd /DeepSpeed
+        cd DeepSpeed
         pytest --verbose tests/*
 
 
