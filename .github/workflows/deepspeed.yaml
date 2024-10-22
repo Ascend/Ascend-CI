@@ -69,14 +69,14 @@ jobs:
             print(f"Device Available: {torch.npu.is_available()}")
         EOF
 
-    - name: Install transformers
-      run: |
-        source /root/.bashrc
-        echo "y" | apt-get install git
-        git clone https://github.com/huggingface/transformers
-        cd transformers
-        git rev-parse --short HEAD
-        pip install . -i https://pypi.tuna.tsinghua.edu.cn/simple
+    # - name: Install transformers
+    #   run: |
+    #     source /root/.bashrc
+    #     echo "y" | apt-get install git
+    #     git clone https://github.com/huggingface/transformers
+    #     cd transformers
+    #     git rev-parse --short HEAD
+    #     pip install .
              
     - name: Install deepspeed
       run: |
@@ -84,8 +84,8 @@ jobs:
         echo "y" | apt-get install git
         git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
         cd DeepSpeed
-        pip install .[1bit,autotuning,inf]
-        pip install -r ../requirements/requirements_deepspeed.txt       
+        pip install -r ../requirements/requirements_deepspeed.txt
+        pip install .[1bit,autotuning,inf]   
         ds_report
 
     - name: Python environment
