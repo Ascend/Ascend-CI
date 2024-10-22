@@ -84,7 +84,7 @@ jobs:
         echo "y" | apt-get install git
         git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
         cd DeepSpeed
-        pip install .
+        pip install .[1bit,autotuning,inf]
         pip install -r ../requirements/requirements_deepspeed.txt       
         ds_report
 
