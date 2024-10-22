@@ -87,6 +87,7 @@ jobs:
         cd DeepSpeed
         pip install -r ../requirements/requirements_deepspeed.txt
         pip install .[1bit,autotuning,inf]   
+        pip list
         ds_report
 
     - name: Python environment
@@ -99,8 +100,9 @@ jobs:
         source /root/.bashrc
         unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
         
-        cd DeepSpeed
-        pytest --verbose tests/*
+        cd DeepSpeed/tests/
+        pytest --verbose $PYTEST_OPTS --forked -n 4  unit/
+        pytest $PYTEST_OPTS --forked -m 'sequential' unit/
 
 
 
