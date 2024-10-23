@@ -87,6 +87,7 @@ jobs:
         cd DeepSpeed
         pip install -r ../requirements/requirements_deepspeed.txt
         pip install .[1bit,autotuning,inf]   
+        pip install --upgrade deepspeed==0.15.2
         pip list
         ds_report
 
