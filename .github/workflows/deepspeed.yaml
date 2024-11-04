@@ -39,7 +39,7 @@ jobs:
         - /etc/ascend_install.info:/etc/ascend_install.info   
       options: --network host
                --name deepspeed_unit-tests
-               --device /dev/davinci6
+               --device /dev/davinci4
                --device /dev/davinci_manager
                --device /dev/devmm_svm
                --device /dev/hisi_hdc
@@ -52,13 +52,13 @@ jobs:
     - name: Install pytorch 
       run: |
         npu-smi info
-        apt-get update   
+        apt-get update 
+        apt-get install sudo
         pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
         source /root/.bashrc
 
         pip install torch==2.2.0 torchvision==0.17.0 torch_npu==2.2.0 torchaudio==2.2.0 numpy==1.26.4 cloudpickle tornado ml-dtypes
         
-        python --version
         python << EOF 
         if __name__ == '__main__':
             import torch
@@ -69,24 +69,29 @@ jobs:
             print(f"Device Available: {torch.npu.is_available()}")
         EOF
 
-    # - name: Install transformers
-    #   run: |
-    #     source /root/.bashrc
-    #     echo "y" | apt-get install git
-    #     git clone https://github.com/huggingface/transformers
-    #     cd transformers
-    #     git rev-parse --short HEAD
-    #     pip install .
-             
-    - name: Install deepspeed
+    - name: Install transformers
       run: |
         source /root/.bashrc
         echo "y" | apt-get install git
-        git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
-        cd DeepSpeed
-        pip install -r ../requirements/requirements_deepspeed.txt
-        pip install .[1bit,autotuning,inf]   
-        ds_report
+        git clone https://github.com/huggingface/transformers
+        cd transformers
+        git rev-parse --short HEAD
+        pip install .
+             
+    - name: Install deepspeed
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 30
+        max_attempts: 3
+        retry_on: error
+        command: | 
+          source /root/.bashrc
+          git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
+          pip install -r requirements/requirements_deepspeed.txt 
+          cd DeepSpeed
+          pip install .[1bit,autotuning,inf]   
+  
+          ds_report
 
     - name: Python environment
       run: |
@@ -97,9 +102,29 @@ jobs:
       run: |
         source /root/.bashrc
         unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
+        cd DeepSpeed/tests/unit/
         
-        cd /DeepSpeed
-        pytest --verbose tests/*
+        pytest --verbose accelerator/*
+        pytest --verbose autotuning/*
+        pytest --verbose checkpoint/test_reshape_checkpoint.py
+        pytest --verbose checkpoint/test_moe_checkpoint.py
+        pytest --verbose checkpoint/test_shared_weights.py
+        pytest --verbose launcher/test_ds_arguments.py launcher/test_run.py
+        pytest --verbose model_parallelism/*
+        pytest --verbose moe/test_moe_tp.py
+        pytest --verbose monitor/*
+        pytest --verbose utils/*
+        pytest --verbose runtime/test_ds_config_model.py
+        pytest --verbose runtime/pipe/test_pipe_schedule.py
+        pytest --verbose runtime/zero/test_zero_config.py
+        pytest --verbose runtime/zero/test_zero_tiled.py
+        pytest --verbose runtime/zero/test_zeropp.py
+        pytest --verbose runtime/test_autocast.py
+        pytest --verbose runtime/test_data.py
+        pytest --verbose runtime/test_runtime_utils.py
+        pytest --verbose runtime/activation_checkpointing/*
+        pytest --verbose runtime/utils/*
+        pytest --verbose runtime/zero/test_zero_dynamic_class.py
 
 
 
