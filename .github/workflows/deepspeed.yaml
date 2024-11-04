@@ -11,11 +11,7 @@ on:
       - 'requirements/**'
   schedule:
     - cron: "0 0 * * *"
-  push:
-    paths:
-      - '.github/workflows/deepspeed.yaml'
 
-  
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -70,13 +66,18 @@ jobs:
         EOF
 
     - name: Install transformers
-      run: |
-        source /root/.bashrc
-        echo "y" | apt-get install git
-        git clone https://github.com/huggingface/transformers
-        cd transformers
-        git rev-parse --short HEAD
-        pip install .
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 30
+        max_attempts: 3
+        retry_on: error
+        command: | 
+          source /root/.bashrc
+          echo "y" | apt-get install git
+          git clone https://github.com/huggingface/transformers
+          cd transformers
+          git rev-parse --short HEAD
+          pip install .
              
     - name: Install deepspeed
       uses: nick-fields/retry@v3
