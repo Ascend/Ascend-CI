@@ -8,13 +8,11 @@ on:
   pull_request:
     paths:
       - '.github/workflows/deepspeed.yaml'
-      - '.github/workflows/deepspeed.yaml'
       - 'requirements/**'
   schedule:
     - cron: "0 0 * * *"
   push:
     paths:
-      - '.github/workflows/deepspeed.yaml'
       - '.github/workflows/deepspeed.yaml'
 
   
@@ -41,13 +39,12 @@ jobs:
         - /etc/ascend_install.info:/etc/ascend_install.info   
       options: --network host
                --name deepspeed_unit-tests
-               --device /dev/davinci6
+               --device /dev/davinci4
                --device /dev/davinci_manager
                --device /dev/devmm_svm
                --device /dev/hisi_hdc
                --shm-size "20g"
                --entrypoint /bin/bash
-                              
                               
     steps:
     - uses: actions/checkout@v4
