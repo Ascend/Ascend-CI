@@ -1,0 +1,63 @@
+name: llama.cpp
+
+defaults:
+  run:
+    shell: bash -ieo pipefail {0}
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/llamacpp.yaml'
+      - 'requirements/**'
+  schedule:
+    - cron: "0 0 * * *"
+  push:
+    paths:
+        - '.github/workflows/llamacpp.yaml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  unit-tests:
+    runs-on: [self-hosted, ascend, npu]
+    container:
+      image: ascendai/cann
+      ports:
+        - 80
+      volumes:
+        - /usr/local/dcmi:/usr/local/dcmi
+        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi 
+        - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
+        - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
+        - /etc/ascend_install.info:/etc/ascend_install.info   
+      options: --network host
+               --name llamacpp_build
+               --device /dev/davinci0
+               --device /dev/davinci_manager
+               --device /dev/devmm_svm
+               --device /dev/hisi_hdc
+               --entrypoint /bin/bash
+                              
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install llamacpp
+      run: |
+        git clone https://github.com/ggerganov/llama.cpp.git
+        cd llama.cpp
+        cmake -B build
+        cmake --build build --config Release
+    
+
+
+
+    
+
+    
+    
