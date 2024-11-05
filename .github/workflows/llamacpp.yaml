@@ -56,7 +56,7 @@ jobs:
         command: | 
           npu-smi info
           apt-get update 
-          apt-get install sudo
+          apt-get install sudo cmake
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           echo "y" | apt-get install git
           source /root/.bashrc
