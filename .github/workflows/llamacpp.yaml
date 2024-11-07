@@ -38,7 +38,7 @@ jobs:
         - /etc/ascend_install.info:/etc/ascend_install.info   
       options: --network host
                --name llamacpp_build
-               --device /dev/davinci0
+               --device /dev/davinci6
                --device /dev/davinci_manager
                --device /dev/devmm_svm
                --device /dev/hisi_hdc
