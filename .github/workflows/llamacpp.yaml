@@ -58,6 +58,7 @@ jobs:
           apt-get update 
           echo "y" | apt-get install cmake 
           echo "y" | apt-get install git
+          apt-get install build-essential
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           source /root/.bashrc
           
