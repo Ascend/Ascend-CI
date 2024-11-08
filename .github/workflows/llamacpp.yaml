@@ -61,10 +61,11 @@ jobs:
           echo "y" | apt-get install build-essential
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           source /root/.bashrc
-          
+
+          gcc --version
           git clone https://github.com/ggerganov/llama.cpp.git
           cd llama.cpp
-
+          
     - name: Build 
       run: |
           cmake -B build
