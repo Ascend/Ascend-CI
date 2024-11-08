@@ -65,7 +65,7 @@ jobs:
     - name: Build 
       run: |
           cd llama.cpp
-          mdkir build
+          mkdir build
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=release
           cmake --build . --config Release -j $(nproc)
