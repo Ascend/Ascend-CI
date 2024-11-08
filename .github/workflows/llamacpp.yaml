@@ -56,7 +56,7 @@ jobs:
         command: | 
           npu-smi info
           apt-get update 
-          echo "y" | apt-get install cmake 
+          echo "yy" | apt-get install cmake make
           echo "y" | apt-get install git
           echo "y" | apt-get install build-essential
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
@@ -68,8 +68,9 @@ jobs:
           
     - name: Build 
       run: |
-          cmake -B build
-          cmake --build build --config Release
+          make
+          # cmake -B build
+          # cmake --build build --config Release
     
 
 
