@@ -57,7 +57,6 @@ jobs:
           apt-get update 
           apt-get install cmake make git build-essential -y
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-          source /root/.bashrc
 
           git clone https://github.com/ggerganov/llama.cpp.git
           
