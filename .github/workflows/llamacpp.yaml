@@ -62,10 +62,11 @@ jobs:
 
           gcc --version
           git clone https://github.com/ggerganov/llama.cpp.git
-          cd llama.cpp
+          
           
     - name: Build 
       run: |
+          cd llama.cpp
           make
           # cmake -B build
           # cmake --build build --config Release
