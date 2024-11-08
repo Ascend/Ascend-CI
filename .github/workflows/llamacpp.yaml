@@ -25,9 +25,9 @@ permissions:
 
 jobs:
   unit-tests:
-    runs-on: ascendai/cann
-    # container:
-    #   image: ascendai/cann
+    runs-on: ubuntu-latest
+    container:
+      image: ascendai/cann
     #   ports:
     #     - 80
     #   volumes:
