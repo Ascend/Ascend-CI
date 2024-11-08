@@ -38,7 +38,7 @@ jobs:
         - /etc/ascend_install.info:/etc/ascend_install.info   
       options: --network host
                --name llamacpp_build
-               --device /dev/davinci6
+               --device /dev/davinci5
                --device /dev/davinci_manager
                --device /dev/devmm_svm
                --device /dev/hisi_hdc
@@ -64,6 +64,9 @@ jobs:
           
           git clone https://github.com/ggerganov/llama.cpp.git
           cd llama.cpp
+
+    - name: Build 
+      run: |
           cmake -B build
           cmake --build build --config Release
     
