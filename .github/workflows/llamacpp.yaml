@@ -9,8 +9,7 @@ on:
     paths:
       - '.github/workflows/llamacpp.yaml'
       - 'requirements/**'
-  schedule:
-    - cron: "0 0 * * *"
+
   push:
     paths:
         - '.github/workflows/llamacpp.yaml'
@@ -27,22 +26,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     container:
-      image: ascendai/cann
-    #   ports:
-    #     - 80
-    #   volumes:
-    #     - /usr/local/dcmi:/usr/local/dcmi
-    #     - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi 
-    #     - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
-    #     - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
-    #     - /etc/ascend_install.info:/etc/ascend_install.info   
-    #   options: --network host
-    #            --name llamacpp_build
-    #            --device /dev/davinci5
-    #            --device /dev/davinci_manager
-    #            --device /dev/devmm_svm
-    #            --device /dev/hisi_hdc
-    #            --entrypoint /bin/bash
+      image: ascendai/cann:8.0.rc2.beta1-910b-openeuler22.03-py3.9
                               
     steps:
     - uses: actions/checkout@v4
@@ -55,19 +39,18 @@ jobs:
         retry_on: error
         command: | 
           apt-get update 
-          apt-get install cmake make git build-essential -y
+          apt-get install cmake -y
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
           git clone https://github.com/ggerganov/llama.cpp.git
-          
-          
+                  
     - name: Build 
       run: |
           cd llama.cpp
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=release
-          cmake --build . --config Release -j $(nproc)
+          cmake .. -DCMAKE_BUILD_TYPE=release -DWITH_CANN=on
+          cmake --build . -j $(nproc)
     
 
 
