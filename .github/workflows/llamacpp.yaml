@@ -46,12 +46,12 @@ jobs:
         command: |
           yum update -y
           yum install git cmake gcc gcc-c++ make -y
-          source /root/.bashrc
           
           git clone https://github.com/ggerganov/llama.cpp.git
 
     - name: Build
       run: |
+          source /root/.bashrc
           cd llama.cpp
           mkdir build
           cd build
