@@ -32,7 +32,7 @@ jobs:
         build: ['Release']
 
     container:
-      image: ascendai/cann:openeuler-${{ matrix.build }}
+      image: ascendai/cann:openeuler-${{ matrix.cann }}
 
     steps:
     - uses: actions/checkout@v4
