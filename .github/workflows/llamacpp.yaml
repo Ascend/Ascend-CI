@@ -39,7 +39,7 @@ jobs:
         retry_on: error
         command: | 
           yum update -y
-          yum install git cmake gcc gcc-c++ -y
+          yum install git cmake gcc gcc-c++ make -y
 
           git clone https://github.com/ggerganov/llama.cpp.git
                   
