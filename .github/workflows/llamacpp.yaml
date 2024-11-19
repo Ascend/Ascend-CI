@@ -25,14 +25,15 @@ permissions:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-    container:
-      image: ascendai/cann:8.0.rc2.beta1-910b-openeuler22.03-py3.9
 
     strategy:
       matrix:
         cann: ['8.0.rc2.beta1']
-        build: ['cann']  
-                              
+        build: ['Release']
+
+    container:
+      image: ascendai/cann:${{ matrix.build }}-910b-openeuler22.03-py3.9
+
     steps:
     - uses: actions/checkout@v4
 
@@ -42,20 +43,19 @@ jobs:
         timeout_minutes: 30
         max_attempts: 3
         retry_on: error
-        command: | 
+        command: |
           yum update -y
           yum install git cmake gcc gcc-c++ make -y
 
           git clone https://github.com/ggerganov/llama.cpp.git
-                  
-    - name: Build 
+
+    - name: Build
       run: |
           cd llama.cpp
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=release -DWITH_CANN=on
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DWITH_CANN=on
           cmake --build . -j $(nproc)
-    
 
 
 
