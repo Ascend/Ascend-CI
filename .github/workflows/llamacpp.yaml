@@ -32,7 +32,7 @@ jobs:
         build: ['Release']
 
     container:
-      image: ascendai/cann:${{ matrix.build }}-910b-openeuler22.03-py3.9
+      image: ascendai/cann:${{ matrix.cann }}-910b-openeuler22.03-py3.9
 
     steps:
     - uses: actions/checkout@v4
