@@ -28,7 +28,7 @@ jobs:
 
     strategy:
       matrix:
-        cann: ['python3.9-cann8.0.rc2.beta1','python3.10-cann8.0.rc3.beta1']
+        cann: ['python3.10-cann8.0.rc3.beta1']
         build: ['Release']
 
     container:
@@ -54,7 +54,7 @@ jobs:
           cd llama.cpp
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DWITH_CANN=on
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on
           cmake --build . -j $(nproc)
 
 
