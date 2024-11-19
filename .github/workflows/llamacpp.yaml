@@ -38,9 +38,8 @@ jobs:
         max_attempts: 3
         retry_on: error
         command: | 
-          yum update 
-          yum install git cmake -y
-          pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+          yum update -y
+          yum install git cmake gcc gcc-c++ -y
 
           git clone https://github.com/ggerganov/llama.cpp.git
                   
