@@ -52,6 +52,7 @@ jobs:
     - name: Build
       run: |
           source /root/.bashrc
+          export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
           cd llama.cpp
           mkdir build
           cd build
