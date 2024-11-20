@@ -2,7 +2,7 @@ name: llama.cpp
 
 defaults:
   run:
-    shell: bash -ieo pipefail {0}
+    shell: bash -el {0}
 on:
   workflow_dispatch:
   pull_request:
@@ -51,8 +51,8 @@ jobs:
 
     - name: Build
       run: |
-          source /root/.bashrc
-          export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
+          # source /root/.bashrc
+          # export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
           cd llama.cpp
           mkdir build
           cd build
