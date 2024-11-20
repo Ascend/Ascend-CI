@@ -59,6 +59,39 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on
           cmake --build . -j $(nproc)
+          
+  ubuntu-unit-tests:
+    runs-on: ubuntu-latest
+
+    container:
+      image: ascendai/cann
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install llamacpp
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 30
+        max_attempts: 3
+        retry_on: error
+        command: |
+          apt-get update -y
+          apt-get install git cmake build-essential make -y
+          
+          git clone https://github.com/ggerganov/llama.cpp.git
+
+    - name: Build
+      run: |
+          echo "-----------111111111-----------------"
+          echo $LIBRARY_PATH
+          echo "----------111111111111------------------"
+          cd llama.cpp
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on
+          cmake --build . -j $(nproc)
+
 
 
 
