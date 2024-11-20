@@ -51,6 +51,8 @@ jobs:
 
     - name: Build
       run: |
+          cat /root/.bashrc
+          cat /usr/local/Ascend/ascend-toolkit/set_env.sh
           source /usr/local/Ascend/ascend-toolkit/set_env.sh
           echo "-----------111111111-----------------"
           echo $LIBRARY_PATH
@@ -83,6 +85,8 @@ jobs:
 
     - name: Build
       run: |
+          cat /root/.bashrc
+          cat /usr/local/Ascend/ascend-toolkit/set_env.sh
           source /usr/local/Ascend/ascend-toolkit/set_env.sh
           echo "-----------111111111-----------------"
           echo $LIBRARY_PATH
