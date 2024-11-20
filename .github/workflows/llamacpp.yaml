@@ -54,6 +54,7 @@ jobs:
           cat /root/.bashrc
           cat /usr/local/Ascend/ascend-toolkit/set_env.sh
           source /usr/local/Ascend/ascend-toolkit/set_env.sh
+          export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
           echo "-----------111111111-----------------"
           echo $LIBRARY_PATH
           echo "----------111111111111------------------"
@@ -88,6 +89,7 @@ jobs:
           cat /root/.bashrc
           cat /usr/local/Ascend/ascend-toolkit/set_env.sh
           source /usr/local/Ascend/ascend-toolkit/set_env.sh
+          export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
           echo "-----------111111111-----------------"
           echo $LIBRARY_PATH
           echo "----------111111111111------------------"
