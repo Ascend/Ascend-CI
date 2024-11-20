@@ -90,7 +90,7 @@ jobs:
           mkdir build
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on
-          cmake --build . -j $(nproc)
+          cmake --build . -j32
 
 
 
