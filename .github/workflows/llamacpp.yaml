@@ -94,8 +94,8 @@ jobs:
           cd llama.cpp
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DGGML_CANN=on && make -j32
-
+          cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on
+          cmake --build build -j $(nproc)
 
 
 
