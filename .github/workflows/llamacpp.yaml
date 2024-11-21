@@ -1,8 +1,8 @@
 name: llama.cpp
 
-defaults:
-  run:
-    shell: bash -el {0}
+# defaults:
+#   run:
+#     shell: bash -el {0}
 on:
   workflow_dispatch:
   pull_request:
