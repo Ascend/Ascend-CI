@@ -61,7 +61,18 @@ jobs:
           cd llama.cpp
           mkdir build
           cd build
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh && cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on && make -j32
+          
+          export ASCEND_TOOLKIT_HOME=/usr/local/Ascend/ascend-toolkit/latest
+          export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${ASCEND_TOOLKIT_HOME}/lib64/plugin/opskernel:${ASCEND_TOOLKIT_HOME}/lib64/plugin/nnengine:${ASCEND_TOOLKIT_HOME}/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/$(arch):$LD_LIBRARY_PATH
+          export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/tools/aml/lib64:${ASCEND_TOOLKIT_HOME}/tools/aml/lib64/plugin:$LD_LIBRARY_PATH
+          export PYTHONPATH=${ASCEND_TOOLKIT_HOME}/python/site-packages:${ASCEND_TOOLKIT_HOME}/opp/built-in/op_impl/ai_core/tbe:$PYTHONPATH
+          export PATH=${ASCEND_TOOLKIT_HOME}/bin:${ASCEND_TOOLKIT_HOME}/compiler/ccec_compiler/bin:${ASCEND_TOOLKIT_HOME}/tools/ccec_compiler/bin:$PATH
+          export ASCEND_AICPU_PATH=${ASCEND_TOOLKIT_HOME}
+          export ASCEND_OPP_PATH=${ASCEND_TOOLKIT_HOME}/opp
+          export TOOLCHAIN_HOME=${ASCEND_TOOLKIT_HOME}/toolkit
+          export ASCEND_HOME_PATH=${ASCEND_TOOLKIT_HOME}
+
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on && make -j32
           
   ubuntu-unit-tests:
     runs-on: ubuntu-latest
@@ -94,7 +105,18 @@ jobs:
           # echo $LIBRARY_PATH
           # echo "----------111111111111------------------"
           cd llama.cpp
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh && cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on && cmake --build build -j $(nproc)
+          
+          export ASCEND_TOOLKIT_HOME=/usr/local/Ascend/ascend-toolkit/latest
+          export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${ASCEND_TOOLKIT_HOME}/lib64/plugin/opskernel:${ASCEND_TOOLKIT_HOME}/lib64/plugin/nnengine:${ASCEND_TOOLKIT_HOME}/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/$(arch):$LD_LIBRARY_PATH
+          export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/tools/aml/lib64:${ASCEND_TOOLKIT_HOME}/tools/aml/lib64/plugin:$LD_LIBRARY_PATH
+          export PYTHONPATH=${ASCEND_TOOLKIT_HOME}/python/site-packages:${ASCEND_TOOLKIT_HOME}/opp/built-in/op_impl/ai_core/tbe:$PYTHONPATH
+          export PATH=${ASCEND_TOOLKIT_HOME}/bin:${ASCEND_TOOLKIT_HOME}/compiler/ccec_compiler/bin:${ASCEND_TOOLKIT_HOME}/tools/ccec_compiler/bin:$PATH
+          export ASCEND_AICPU_PATH=${ASCEND_TOOLKIT_HOME}
+          export ASCEND_OPP_PATH=${ASCEND_TOOLKIT_HOME}/opp
+          export TOOLCHAIN_HOME=${ASCEND_TOOLKIT_HOME}/toolkit
+          export ASCEND_HOME_PATH=${ASCEND_TOOLKIT_HOME}
+
+          cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on && cmake --build build -j $(nproc)
 
 
 
