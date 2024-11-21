@@ -51,17 +51,17 @@ jobs:
 
     - name: Build
       run: |
-          cat /root/.bashrc
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh
-          cat /usr/local/Ascend/ascend-toolkit/set_env.sh
-          export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
-          echo "-----------111111111-----------------"
-          echo $LIBRARY_PATH
-          echo "----------111111111111------------------"
+          # cat /root/.bashrc
+          # source /usr/local/Ascend/ascend-toolkit/set_env.sh
+          # cat /usr/local/Ascend/ascend-toolkit/set_env.sh
+          # export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
+          # echo "-----------111111111-----------------"
+          # echo $LIBRARY_PATH
+          # echo "----------111111111111------------------"
           cd llama.cpp
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on && make -j32
+          source /usr/local/Ascend/ascend-toolkit/set_env.sh && cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on && make -j32
           
   ubuntu-unit-tests:
     runs-on: ubuntu-latest
@@ -86,16 +86,15 @@ jobs:
 
     - name: Build
       run: |
-          cat /root/.bashrc
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh
-          cat /usr/local/Ascend/ascend-toolkit/set_env.sh
-          export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
-          echo "-----------111111111-----------------"
-          echo $LIBRARY_PATH
-          echo "----------111111111111------------------"
+          # cat /root/.bashrc
+          # source /usr/local/Ascend/ascend-toolkit/set_env.sh
+          # cat /usr/local/Ascend/ascend-toolkit/set_env.sh
+          # export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
+          # echo "-----------111111111-----------------"
+          # echo $LIBRARY_PATH
+          # echo "----------111111111111------------------"
           cd llama.cpp
-          cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on
-          cmake --build build -j $(nproc)
+          source /usr/local/Ascend/ascend-toolkit/set_env.sh && cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on && cmake --build build -j $(nproc)
 
 
 
