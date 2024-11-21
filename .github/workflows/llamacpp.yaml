@@ -53,7 +53,6 @@ jobs:
       run: |
           cat /root/.bashrc
           cat /usr/local/Ascend/ascend-toolkit/set_env.sh
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh
           export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
           echo "-----------111111111-----------------"
           echo $LIBRARY_PATH
@@ -88,7 +87,6 @@ jobs:
       run: |
           cat /root/.bashrc
           cat /usr/local/Ascend/ascend-toolkit/set_env.sh
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh
           export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
           echo "-----------111111111-----------------"
           echo $LIBRARY_PATH
@@ -96,7 +94,7 @@ jobs:
           cd llama.cpp
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on && make -j32
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DGGML_CANN=on && make -j32
 
 
 
