@@ -92,8 +92,6 @@ jobs:
           echo $LIBRARY_PATH
           echo "----------111111111111------------------"
           cd llama.cpp
-          mkdir build
-          cd build
           cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on
           cmake --build build -j $(nproc)
 
