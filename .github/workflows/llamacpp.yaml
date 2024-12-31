@@ -28,7 +28,7 @@ jobs:
 
     strategy:
       matrix:
-        cann: ['python3.10-cann8.0.rc3.beta1']
+        cann: ['python3.10-cann8.0.rc2.beta1']
         build: ['Release']
 
     container:
