@@ -72,7 +72,7 @@ jobs:
           # export TOOLCHAIN_HOME=${ASCEND_TOOLKIT_HOME}/toolkit
           # export ASCEND_HOME_PATH=${ASCEND_TOOLKIT_HOME}
 
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on && cmake --build .. --config release
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=ascend910b2 && cmake --build .. --config release
           
   ubuntu-unit-tests:
     runs-on: ubuntu-latest
@@ -116,7 +116,7 @@ jobs:
           export TOOLCHAIN_HOME=${ASCEND_TOOLKIT_HOME}/toolkit
           export ASCEND_HOME_PATH=${ASCEND_TOOLKIT_HOME}
 
-          cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on && cmake --build build -j $(nproc)
+          cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b2 && cmake --build build -j $(nproc)
 
 
 
