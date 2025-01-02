@@ -24,15 +24,26 @@ permissions:
 
 jobs:
   unit-tests:
-    runs-on: ubuntu-latest
-
+    runs-on: [self-hosted, ascend, npu]
     strategy:
       matrix:
         cann: ['python3.10-cann8.0.rc2.beta1']
         build: ['Release']
-
     container:
       image: ascendai/cann:openeuler-${{ matrix.cann }}
+      ports:
+        - 80
+      volumes:
+        - /usr/local/dcmi:/usr/local/dcmi
+        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi 
+        - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
+        - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
+        - /etc/ascend_install.info:/etc/ascend_install.info   
+      options: --name llamacpp_cmake
+               --device /dev/davinci4
+               --device /dev/davinci_manager
+               --device /dev/devmm_svm
+               --device /dev/hisi_hdc
 
     steps:
     - uses: actions/checkout@v4
@@ -45,40 +56,37 @@ jobs:
         retry_on: error
         command: |
           yum update -y
-          yum install git cmake gcc gcc-c++ make -y
-          
+          yum install git cmake gcc gcc-c++ make -y  
           git clone https://github.com/ggerganov/llama.cpp.git
 
     - name: Build
       run: |
-          # cat /root/.bashrc
-          # source /usr/local/Ascend/ascend-toolkit/set_env.sh
-          # cat /usr/local/Ascend/ascend-toolkit/set_env.sh
-          # export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
-          # echo "-----------111111111-----------------"
-          # echo $LIBRARY_PATH
-          # echo "----------111111111111------------------"
           cd llama.cpp
           mkdir build
           cd build
-          
-          # export ASCEND_TOOLKIT_HOME=/usr/local/Ascend/ascend-toolkit/latest
-          # export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${ASCEND_TOOLKIT_HOME}/lib64/plugin/opskernel:${ASCEND_TOOLKIT_HOME}/lib64/plugin/nnengine:${ASCEND_TOOLKIT_HOME}/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/$(arch):$LD_LIBRARY_PATH
-          # export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/tools/aml/lib64:${ASCEND_TOOLKIT_HOME}/tools/aml/lib64/plugin:$LD_LIBRARY_PATH
-          # export PYTHONPATH=${ASCEND_TOOLKIT_HOME}/python/site-packages:${ASCEND_TOOLKIT_HOME}/opp/built-in/op_impl/ai_core/tbe:$PYTHONPATH
-          # export PATH=${ASCEND_TOOLKIT_HOME}/bin:${ASCEND_TOOLKIT_HOME}/compiler/ccec_compiler/bin:${ASCEND_TOOLKIT_HOME}/tools/ccec_compiler/bin:$PATH
-          # export ASCEND_AICPU_PATH=${ASCEND_TOOLKIT_HOME}
-          # export ASCEND_OPP_PATH=${ASCEND_TOOLKIT_HOME}/opp
-          # export TOOLCHAIN_HOME=${ASCEND_TOOLKIT_HOME}/toolkit
-          # export ASCEND_HOME_PATH=${ASCEND_TOOLKIT_HOME}
-
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=ascend910b2 && cmake --build .. --config release
           
   ubuntu-unit-tests:
-    runs-on: ubuntu-latest
-
+    runs-on: [self-hosted, ascend, npu]
+    strategy:
+      matrix:
+        cann: ['python3.10-cann8.0.rc2.beta1']
+        build: ['Release']
     container:
       image: ascendai/cann
+      ports:
+        - 80
+      volumes:
+        - /usr/local/dcmi:/usr/local/dcmi
+        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi 
+        - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
+        - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
+        - /etc/ascend_install.info:/etc/ascend_install.info   
+      options: --name llamacpp_cmake
+               --device /dev/davinci0
+               --device /dev/davinci_manager
+               --device /dev/devmm_svm
+               --device /dev/hisi_hdc
 
     steps:
     - uses: actions/checkout@v4
@@ -91,31 +99,12 @@ jobs:
         retry_on: error
         command: |
           apt-get update -y
-          apt-get install git cmake build-essential make -y
-          
+          apt-get install git cmake build-essential make -y   
           git clone https://github.com/ggerganov/llama.cpp.git
 
     - name: Build
       run: |
-          # cat /root/.bashrc
-          # source /usr/local/Ascend/ascend-toolkit/set_env.sh
-          # cat /usr/local/Ascend/ascend-toolkit/set_env.sh
-          # export LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${LIBRARY_PATH}
-          # echo "-----------111111111-----------------"
-          # echo $LIBRARY_PATH
-          # echo "----------111111111111------------------"
           cd llama.cpp
-          
-          export ASCEND_TOOLKIT_HOME=/usr/local/Ascend/ascend-toolkit/latest
-          export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${ASCEND_TOOLKIT_HOME}/lib64/plugin/opskernel:${ASCEND_TOOLKIT_HOME}/lib64/plugin/nnengine:${ASCEND_TOOLKIT_HOME}/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/$(arch):$LD_LIBRARY_PATH
-          export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/tools/aml/lib64:${ASCEND_TOOLKIT_HOME}/tools/aml/lib64/plugin:$LD_LIBRARY_PATH
-          export PYTHONPATH=${ASCEND_TOOLKIT_HOME}/python/site-packages:${ASCEND_TOOLKIT_HOME}/opp/built-in/op_impl/ai_core/tbe:$PYTHONPATH
-          export PATH=${ASCEND_TOOLKIT_HOME}/bin:${ASCEND_TOOLKIT_HOME}/compiler/ccec_compiler/bin:${ASCEND_TOOLKIT_HOME}/tools/ccec_compiler/bin:$PATH
-          export ASCEND_AICPU_PATH=${ASCEND_TOOLKIT_HOME}
-          export ASCEND_OPP_PATH=${ASCEND_TOOLKIT_HOME}/opp
-          export TOOLCHAIN_HOME=${ASCEND_TOOLKIT_HOME}/toolkit
-          export ASCEND_HOME_PATH=${ASCEND_TOOLKIT_HOME}
-
           cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b2 && cmake --build build -j $(nproc)
 
 
