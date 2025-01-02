@@ -24,26 +24,15 @@ permissions:
 
 jobs:
   unit-tests:
-    runs-on: [self-hosted, ascend, npu]
+    runs-on: ubuntu-latest
+
     strategy:
       matrix:
         cann: ['python3.10-cann8.0.rc2.beta1']
         build: ['Release']
+
     container:
       image: ascendai/cann:openeuler-${{ matrix.cann }}
-      ports:
-        - 80
-      volumes:
-        - /usr/local/dcmi:/usr/local/dcmi
-        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi 
-        - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
-        - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
-        - /etc/ascend_install.info:/etc/ascend_install.info   
-      options: --name llamacpp_cmake
-               --device /dev/davinci4
-               --device /dev/davinci_manager
-               --device /dev/devmm_svm
-               --device /dev/hisi_hdc
 
     steps:
     - uses: actions/checkout@v4
@@ -64,29 +53,15 @@ jobs:
           cd llama.cpp
           mkdir build
           cd build
+          export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib:${LD_LIBRARY_PATH}
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=ascend910b3 && cmake --build .. --config release
           
   ubuntu-unit-tests:
-    runs-on: [self-hosted, ascend, npu]
-    strategy:
-      matrix:
-        cann: ['python3.10-cann8.0.rc2.beta1']
-        build: ['Release']
+
+    runs-on: ubuntu-latest
+
     container:
       image: ascendai/cann
-      ports:
-        - 80
-      volumes:
-        - /usr/local/dcmi:/usr/local/dcmi
-        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi 
-        - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
-        - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
-        - /etc/ascend_install.info:/etc/ascend_install.info   
-      options: --name llamacpp_cmake
-               --device /dev/davinci0
-               --device /dev/davinci_manager
-               --device /dev/devmm_svm
-               --device /dev/hisi_hdc
 
     steps:
     - uses: actions/checkout@v4
@@ -105,6 +80,7 @@ jobs:
     - name: Build
       run: |
           cd llama.cpp
+          export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib:${LD_LIBRARY_PATH}
           cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b3 && cmake --build build -j $(nproc)
 
 
