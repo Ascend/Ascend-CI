@@ -37,6 +37,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Set up QEMU for ARM64
+      uses: docker/setup-qemu-action@v2
+      with:
+        platforms: linux/arm64
+
     - name: Install llamacpp
       uses: nick-fields/retry@v3
       with:
@@ -67,6 +72,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Set up QEMU for ARM64
+      uses: docker/setup-qemu-action@v2
+      with:
+        platforms: linux/arm64
+        
     - name: Install llamacpp
       uses: nick-fields/retry@v3
       with:
