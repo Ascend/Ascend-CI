@@ -55,7 +55,7 @@ jobs:
           cd build
           export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib:${LD_LIBRARY_PATH}
           echo $LD_LIBRARY_PATH
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=ascend910b3 && cmake --build . --config ${{ matrix.build }}
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=ascend910b3 && cmake --build .
           
   ubuntu-unit-tests:
 
