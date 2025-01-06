@@ -53,7 +53,7 @@ jobs:
           cd llama.cpp
           mkdir build
           cd build
-          export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib:${LD_LIBRARY_PATH}
+          export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib/x86_64/:${LD_LIBRARY_PATH}
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=ascend910b3 && cmake --build .
           
   ubuntu-unit-tests:
@@ -80,7 +80,7 @@ jobs:
     - name: Build
       run: |
           cd llama.cpp
-          export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib:${LD_LIBRARY_PATH}
+          export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib/aarch64/:${LD_LIBRARY_PATH}
           cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b3 && cmake --build build -j $(nproc)
 
 
