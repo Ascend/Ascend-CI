@@ -83,7 +83,33 @@ jobs:
           export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib/:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib/x86_64/:${LD_LIBRARY_PATH}
           cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b3 -DCMAKE_OSX_ARCHITECTURES=arm64 && cmake --build build -j $(nproc)
 
+  ubuntu-arm64-test:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v4
+        
+      - uses: uraimo/run-on-arch-action@v2
+        name: Run Docker on ARM64
+        with:
+          arch: aarch64
+          distro: ubuntu22.04
+          install: |   
+            # apt-get update
+            # apt-get install -y docker.io
+            # docker pull ascendai/cann:latest
+            uname -a
+          base_image: --platform=linux/arm64 ascendai/cann:openeuler-python3.10-cann8.0.rc2.beta1
+          run: |
+            uname -a
+            echo $LD_LIBRARY_PATH
+            yum update -y
+            yum install git cmake gcc gcc-c++ make -y  
+            git clone https://github.com/ggerganov/llama.cpp.git
 
+            cd llama.cpp
+            source ~/.bashrc
+            export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib/:${LD_LIBRARY_PATH}
+            cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b3 && cmake --build build
 
     
 
