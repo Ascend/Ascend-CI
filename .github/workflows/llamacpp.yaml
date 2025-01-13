@@ -10,10 +10,6 @@ on:
       - '.github/workflows/llamacpp.yaml'
       - 'requirements/**'
 
-  push:
-    paths:
-        - '.github/workflows/llamacpp.yaml'
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
