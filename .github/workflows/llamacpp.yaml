@@ -107,7 +107,8 @@ jobs:
 
             cd llama.cpp
             export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib/:${LD_LIBRARY_PATH}
-            cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b3 -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=aarch64 && cmake --build build
+            cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b3 -DGGML_NATIVE=OFF #-DGGML_CPU_ARM_ARCH=armv8-a
+            cmake --build build
 
     
 
