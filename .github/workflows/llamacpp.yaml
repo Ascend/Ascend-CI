@@ -9,6 +9,8 @@ on:
     paths:
       - '.github/workflows/llamacpp.yaml'
       - 'requirements/**'
+  schedule:
+    - cron: "0 0 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
