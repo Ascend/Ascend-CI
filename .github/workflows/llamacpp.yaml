@@ -6,9 +6,9 @@ defaults:
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - '.github/workflows/llamacpp.yaml'
-      - 'requirements/**'
+    # paths:
+    #   - '.github/workflows/llamacpp.yaml'
+    #   - 'requirements/**'
   schedule:
     - cron: "0 0 * * *"
 
@@ -21,23 +21,34 @@ permissions:
   issues: write
 
 jobs:
-    ubuntu-arm64-test:
+    unit-tests:
+      if: contains(github.event.pull_request.labels.*.name, 'Ascend NPU')
+          
       runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          build: ['Release']
+          cann: ['openeuler-python3.10-cann8.0.rc3.beta1']
+          device: ['ascend910b3']
+      container:
+        image: ascendai/cann:${{ matrix.cann }}
       steps:
       - uses: actions/checkout@v4
-      
-      - uses: uraimo/run-on-arch-action@v2
-        name: Run Docker on ARM64
+      - name: Install llamacpp
+        uses: nick-fields/retry@v3
         with:
-          arch: aarch64
-          distro: ubuntu22.04
-          base_image: --platform=linux/arm64 ascendai/cann:openeuler-python3.10-cann8.0.rc3.beta1
-          run: |
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_on: error
+          command: |
             yum update -y
-            yum install git cmake gcc gcc-c++ make -y
-            export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib/:${LD_LIBRARY_PATH}
-            
+            yum install git cmake gcc gcc-c++ make -y  
             git clone https://github.com/ggerganov/llama.cpp.git
+
+      - name: Build
+        run: |
             cd llama.cpp
-            cmake -B build -DCMAKE_BUILD_TYPE=release -DGGML_CANN=on -DSOC_TYPE=ascend910b3 -DGGML_NATIVE=OFF #-DGGML_CPU_ARM_ARCH=armv8-a
-            cmake --build build
+            mkdir build
+            cd build
+            export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/x86_64-linux/devlib/:${LD_LIBRARY_PATH}
+            cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=${{ matrix.device }} && cmake --build . -j $(nproc)
