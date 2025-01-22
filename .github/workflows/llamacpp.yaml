@@ -23,7 +23,7 @@ defaults:
 jobs:
   openeuler-arm64-test:
     if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'Ascend NPU') }}
-    name: Build llama.cpp on OpenEuler 22.03 for Arm64
+    name: Build llama.cpp on OpenEuler for Arm64
     runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
