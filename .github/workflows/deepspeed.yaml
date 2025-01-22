@@ -24,7 +24,7 @@ jobs:
   deepspeed-ut:
     if: ${{ github.repository_owner == 'Ascend' }}
     name: Run unit tests with DeepSpeed
-    runs-on: self-hosted
+    runs-on: [self-hosted, ascend, npu]
     container:
       image: ascendai/cann:latest
       volumes:
