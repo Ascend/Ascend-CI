@@ -104,9 +104,7 @@ jobs:
       - name: Install deepspeed
         working-directory: deepspeed
         run: |
-          pip install .
           pip install .[1bit,autotuning,inf]   
-
           ds_report
 
       - name: Show environment info
