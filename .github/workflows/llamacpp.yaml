@@ -52,7 +52,11 @@ jobs:
       - name: Build llama.cpp
         working-directory: llama.cpp
         run: |
+          set -x
+
           export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${ASCEND_TOOLKIT_HOME}/$(uname -m)-linux/devlib/:${LD_LIBRARY_PATH}
+
+          echo $LD_LIBRARY_PATH
 
           cmake -S . -B build \
               -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
