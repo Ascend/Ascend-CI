@@ -1,8 +1,5 @@
-name: huawei-ascend-npu
+name: Unit tests with DeepSpeed on Ascend NPU
 
-defaults:
-  run:
-    shell: bash -ieo pipefail {0}
 on:
   workflow_dispatch:
   pull_request:
@@ -16,118 +13,127 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  issues: write
+# Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
+# declared as "shell: bash -el {0}" on steps that need to be properly activated.
+# It's used to activate ascend-toolkit environment variables.
+defaults:
+  run:
+    shell: bash -el {0}
 
 jobs:
-  unit-tests:
+  deepspeed-ut:
+    if: ${{ github.repository_owner == 'Ascend' }}
+    name: Run unit tests with DeepSpeed
     runs-on: [self-hosted, ascend, npu]
     container:
-      image: ascendai/cann
-      ports:
-        - 80
+      image: ascendai/cann:latest
       volumes:
         - /usr/local/dcmi:/usr/local/dcmi
-        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi 
+        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi
         - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
         - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
-        - /etc/ascend_install.info:/etc/ascend_install.info   
-      options: --network host
-               --name deepspeed_unit-tests
-               --device /dev/davinci0
-               --device /dev/davinci_manager
-               --device /dev/devmm_svm
-               --device /dev/hisi_hdc
-               --shm-size "20g"
-               --entrypoint /bin/bash
-                              
+        - /etc/ascend_install.info:/etc/ascend_install.info
+      options: >-
+        --network host
+        --device /dev/davinci0
+        --device /dev/davinci_manager
+        --device /dev/devmm_svm
+        --device /dev/hisi_hdc
     steps:
-    - uses: actions/checkout@v4
+      - name: Show NPU info
+        run: |
+          npu-smi info
 
-    - name: Install pytorch 
-      run: |
-        npu-smi info
-        apt-get update 
-        apt-get install sudo
-        pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-        source /root/.bashrc
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
-        pip install torch==2.2.0 torchvision==0.17.0 torch_npu==2.2.0 torchaudio==2.2.0 numpy==1.26.4 cloudpickle tornado ml-dtypes
-        
-        python << EOF 
-        if __name__ == '__main__':
-            import torch
-            import torch_npu
-            torch_npu.npu.set_device("npu:0") 
-            print(f"Device Name: {torch.npu.get_device_name(0)}")
-            print(f"Device Count: {torch.npu.device_count()}")
-            print(f"Device Available: {torch.npu.is_available()}")
-        EOF
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+              git gcc g++ make cmake ninja-build
 
-    - name: Install transformers
-      uses: nick-fields/retry@v3
-      with:
-        timeout_minutes: 30
-        max_attempts: 3
-        retry_on: error
-        command: | 
-          source /root/.bashrc
-          echo "y" | apt-get install git
-          git clone https://github.com/huggingface/transformers
-          cd transformers
-          git rev-parse --short HEAD
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pytorch
+        run: |
+          pip install \
+              torch==2.2.0 \
+              torch_npu==2.2.0 \
+              torchvision==0.17.0 \
+              torchaudio==2.2.0 \
+              numpy==1.26.4 \
+              cloudpickle \
+              tornado \
+              ml-dtypes
+
+          python << EOF 
+          if __name__ == '__main__':
+              import torch
+              import torch_npu
+              torch_npu.npu.set_device("npu:0") 
+              print(f"Device Name: {torch.npu.get_device_name(0)}")
+              print(f"Device Count: {torch.npu.device_count()}")
+              print(f"Device Available: {torch.npu.is_available()}")
+          EOF
+
+      - name: Checkout transformers
+        uses: actions/checkout@v4
+        with:
+          repository: huggingface/transformers
+          path: transformers
+
+      - name: Install transformers
+        working-directory: transformers
+        run: |
           pip install .
-             
-    - name: Install deepspeed
-      uses: nick-fields/retry@v3
-      with:
-        timeout_minutes: 30
-        max_attempts: 3
-        retry_on: error
-        command: | 
-          source /root/.bashrc
-          git clone --depth=1 https://github.com/microsoft/DeepSpeed.git
+
+      - name: Checkout deepspeed
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/DeepSpeed
+          path: deepspeed
+
+      - name: Install deepspeed dependencies
+        run: |
           pip install -r requirements/requirements_deepspeed.txt 
-          cd DeepSpeed
+
+      - name: Install deepspeed
+        working-directory: deepspeed
+        run: |
           pip install .[1bit,autotuning,inf]   
-  
           ds_report
 
-    - name: Python environment
-      run: |
-        source /root/.bashrc
-        pip list
+      - name: Show environment info
+        run: |
+          pip list
 
-    - name: Unit tests
-      run: |
-        source /root/.bashrc
-        unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
-        cd DeepSpeed/tests/unit/
-        
-        pytest --verbose accelerator/*
-        pytest --verbose autotuning/*
-        pytest --verbose checkpoint/test_reshape_checkpoint.py
-        pytest --verbose checkpoint/test_moe_checkpoint.py
-        pytest --verbose checkpoint/test_shared_weights.py
-        pytest --verbose launcher/test_ds_arguments.py launcher/test_run.py
-        pytest --verbose model_parallelism/*
-        pytest --verbose moe/test_moe_tp.py
-        pytest --verbose monitor/*
-        pytest --verbose utils/*
-        pytest --verbose runtime/test_ds_config_model.py
-        pytest --verbose runtime/pipe/test_pipe_schedule.py
-        pytest --verbose runtime/zero/test_zero_config.py
-        pytest --verbose runtime/zero/test_zero_tiled.py
-        pytest --verbose runtime/zero/test_zeropp.py
-        pytest --verbose runtime/test_autocast.py
-        pytest --verbose runtime/test_data.py
-        pytest --verbose runtime/test_runtime_utils.py
-        pytest --verbose runtime/activation_checkpointing/*
-        pytest --verbose runtime/utils/*
-        pytest --verbose runtime/zero/test_zero_dynamic_class.py
+      - name: Run unit tests
+        working-directory: deepspeed/tests/unit
+        run: |
+          unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
 
-
-
-
- 
+          pytest --verbose accelerator/*
+          pytest --verbose autotuning/*
+          pytest --verbose checkpoint/test_reshape_checkpoint.py
+          pytest --verbose checkpoint/test_moe_checkpoint.py
+          pytest --verbose checkpoint/test_shared_weights.py
+          pytest --verbose launcher/test_ds_arguments.py launcher/test_run.py
+          pytest --verbose model_parallelism/*
+          pytest --verbose moe/test_moe_tp.py
+          pytest --verbose monitor/*
+          pytest --verbose utils/*
+          pytest --verbose runtime/test_ds_config_model.py
+          pytest --verbose runtime/pipe/test_pipe_schedule.py
+          pytest --verbose runtime/zero/test_zero_config.py
+          pytest --verbose runtime/zero/test_zero_tiled.py
+          pytest --verbose runtime/zero/test_zeropp.py
+          pytest --verbose runtime/test_autocast.py
+          pytest --verbose runtime/test_data.py
+          pytest --verbose runtime/test_runtime_utils.py
+          pytest --verbose runtime/activation_checkpointing/*
+          pytest --verbose runtime/utils/*
+          pytest --verbose runtime/zero/test_zero_dynamic_class.py

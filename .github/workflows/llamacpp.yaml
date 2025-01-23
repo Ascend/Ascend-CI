@@ -1,14 +1,11 @@
-name: llama.cpp
+name: Build llama.cpp in CANN container
 
-defaults:
-  run:
-    shell: bash -el {0}
 on:
   workflow_dispatch:
   pull_request:
-    # paths:
-    #   - '.github/workflows/llamacpp.yaml'
-    #   - 'requirements/**'
+    paths:
+      - '.github/workflows/llamacpp.yaml'
+      - 'requirements/**'
   schedule:
     - cron: "0 0 * * *"
 
@@ -16,39 +13,49 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  issues: write
+# Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
+# declared as "shell: bash -el {0}" on steps that need to be properly activated.
+# It's used to activate ascend-toolkit environment variables.
+defaults:
+  run:
+    shell: bash -el {0}
 
 jobs:
-    unit-tests:
-      if: contains(github.event.pull_request.labels.*.name, 'Ascend NPU')
-          
-      runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          build: ['Release']
-          cann: ['openeuler-python3.10-cann8.0.rc3.beta1']
-          device: ['ascend910b3']
-      container:
-        image: ascendai/cann:${{ matrix.cann }}
-      steps:
-      - uses: actions/checkout@v4
-      - name: Install llamacpp
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 30
-          max_attempts: 3
-          retry_on: error
-          command: |
-            yum update -y
-            yum install git cmake gcc gcc-c++ make -y  
-            git clone https://github.com/ggerganov/llama.cpp.git
-
-      - name: Build
+  openeuler-arm64-test:
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'Ascend NPU') }}
+    name: Build llama.cpp on OpenEuler for Arm64
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        cann:
+          - '8.0.rc3.beta1-910b-openeuler22.03-py3.10'
+        device:
+          - 'ascend910b3'
+        build:
+          - 'Release'
+    container: ascendai/cann:${{ matrix.cann }}
+    steps:
+      - name: Install dependencies
         run: |
-            cd llama.cpp
-            mkdir build
-            cd build
-            export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/x86_64-linux/devlib/:${LD_LIBRARY_PATH}
-            cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=${{ matrix.device }} && cmake --build . -j $(nproc)
+          yum update -y
+          yum install -y git gcc gcc-c++ make cmake
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout llama.cpp
+        uses: actions/checkout@v4
+        with:
+          repository: ggerganov/llama.cpp
+          path: llama.cpp
+
+      - name: Build llama.cpp
+        working-directory: llama.cpp
+        run: |
+          export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${ASCEND_TOOLKIT_HOME}/$(uname -m)-linux/devlib/:${LD_LIBRARY_PATH}
+
+          cmake -S . -B build \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
+              -DGGML_CANN=on \
+              -DSOC_TYPE=${{ matrix.device }}
+          cmake --build build -j $(nproc)
