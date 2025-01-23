@@ -52,10 +52,11 @@ jobs:
       - name: Build llama.cpp
         working-directory: llama.cpp
         run: |
-          mkdir build
-          cd build
-
+          export ASCEND_TOOLKIT_HOME=/usr/local/Ascend/ascend-toolkit/latest
           export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/$(uname -m)-linux/devlib/:${LD_LIBRARY_PATH}
 
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_CANN=on -DSOC_TYPE=${{ matrix.device }}
-          cmake --build . -j $(nproc)
+          cmake -S . -B build \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
+              -DGGML_CANN=on \
+              -DSOC_TYPE=${{ matrix.device }}
+          cmake --build build -j $(nproc)
