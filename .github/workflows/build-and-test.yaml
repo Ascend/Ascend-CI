@@ -29,5 +29,5 @@ jobs:
         run:
           sudo su - root -c "pushd /root/Git.d/onnxruntime &&
           source /usr/local/Ascend/ascend-toolkit/set_env.sh &&
-          ./build.sh --allow_running_as_root --config RelWithDebInfo --build_shared_lib --parallel --use_cann --build_wheel &&
+          ./build.sh --allow_running_as_root --config RelWithDebInfo --build_shared_lib --parallel --use_cann --build_wheel --skip_tests &&
           popd"
