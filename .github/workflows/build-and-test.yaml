@@ -10,7 +10,7 @@ jobs:
   build-and-test:
     name: Build and test onnx runtime from source
     if: ${{ contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' }}
-    runs-on: openEuler20.03
+    runs-on: ONNXRuntime
     defaults:
       run:
         shell: bash
