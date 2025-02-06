@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-test:
     name: Build and test onnx runtime from source
-    if: ${{ contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' }}
+    if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule') }}
     runs-on: ONNXRuntime
     defaults:
       run:
