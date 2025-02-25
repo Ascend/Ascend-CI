@@ -112,7 +112,7 @@ jobs:
           ds_report
 
       - id: setup-venv
-        uses: ./.github/workflows/setup-venv
+        uses: ./deepspeed/.github/workflows/setup-venv
 
       - name: Show environment info
         run: |
