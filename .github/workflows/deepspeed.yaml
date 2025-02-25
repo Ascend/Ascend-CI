@@ -119,7 +119,7 @@ jobs:
           pip list
 
       - name: Run unit tests
-        working-directory: deepspeed/tests/unit
+        working-directory: deepspeed
         run: |
           unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
           cd tests
