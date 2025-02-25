@@ -48,6 +48,9 @@ jobs:
         run: |
           npu-smi info
 
+      - id: setup-venv
+        uses: ./.github/workflows/setup-venv
+
       - name: Config mirrors
         run: |
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
