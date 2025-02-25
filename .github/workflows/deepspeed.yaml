@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/deepspeed.yaml'
       - 'requirements/**'
+  push:
+    branches: 
+      - 'deepspeed'
+  
   schedule:
     - cron: "0 0 * * *"
 
@@ -115,25 +119,6 @@ jobs:
         working-directory: deepspeed/tests/unit
         run: |
           unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
-
-          pytest --verbose accelerator/*
-          pytest --verbose autotuning/*
-          pytest --verbose checkpoint/test_reshape_checkpoint.py
-          pytest --verbose checkpoint/test_moe_checkpoint.py
-          pytest --verbose checkpoint/test_shared_weights.py
-          pytest --verbose launcher/test_ds_arguments.py launcher/test_run.py
-          pytest --verbose model_parallelism/*
-          pytest --verbose moe/test_moe_tp.py
-          pytest --verbose monitor/*
-          pytest --verbose utils/*
-          pytest --verbose runtime/test_ds_config_model.py
-          pytest --verbose runtime/pipe/test_pipe_schedule.py
-          pytest --verbose runtime/zero/test_zero_config.py
-          pytest --verbose runtime/zero/test_zero_tiled.py
-          pytest --verbose runtime/zero/test_zeropp.py
-          pytest --verbose runtime/test_autocast.py
-          pytest --verbose runtime/test_data.py
-          pytest --verbose runtime/test_runtime_utils.py
-          pytest --verbose runtime/activation_checkpointing/*
-          pytest --verbose runtime/utils/*
-          pytest --verbose runtime/zero/test_zero_dynamic_class.py
+          cd tests
+          pytest $PYTEST_OPTS --forked -n 4 unit/ --torch_ver="2.6" --cuda_ver="12.4"
+          pytest $PYTEST_OPTS --forked -m 'sequential' unit/ --torch_ver="2.6" --cuda_ver="12.4"
