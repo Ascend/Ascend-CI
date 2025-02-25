@@ -101,9 +101,6 @@ jobs:
           repository: microsoft/DeepSpeed
           path: deepspeed
 
-      - id: setup-venv
-        uses: ./.github/workflows/setup-venv
-
       - name: Install deepspeed dependencies
         run: |
           pip install -r requirements/requirements_deepspeed.txt 
@@ -113,6 +110,9 @@ jobs:
         run: |
           pip install .[1bit,autotuning,inf]   
           ds_report
+
+      - id: setup-venv
+        uses: ./.github/workflows/setup-venv
 
       - name: Show environment info
         run: |
