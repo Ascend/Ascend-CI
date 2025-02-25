@@ -101,6 +101,9 @@ jobs:
           repository: microsoft/DeepSpeed
           path: deepspeed
 
+      - id: setup-venv
+        uses: ./deepspeed/.github/workflows/setup-venv
+
       - name: Install deepspeed dependencies
         run: |
           pip install -r requirements/requirements_deepspeed.txt 
@@ -111,9 +114,6 @@ jobs:
           pip install .[1bit,autotuning,inf]   
           ds_report
 
-      - id: setup-venv
-        uses: ./deepspeed/.github/workflows/setup-venv
-
       - name: Show environment info
         run: |
           pip list
@@ -123,5 +123,5 @@ jobs:
         run: |
           unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
           cd tests
-          pytest $PYTEST_OPTS --forked -n 4 unit/ --torch_ver="2.6" --cuda_ver="12.4"
-          pytest $PYTEST_OPTS --forked -m 'sequential' unit/ --torch_ver="2.6" --cuda_ver="12.4"
+          pytest $PYTEST_OPTS --forked -n 4 unit/
+          pytest $PYTEST_OPTS --forked -m 'sequential' unit/
