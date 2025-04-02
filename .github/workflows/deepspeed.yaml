@@ -47,6 +47,7 @@ jobs:
       - name: Show NPU info
         run: |
           npu-smi info
+          python --version
 
       - name: Config mirrors
         run: |
