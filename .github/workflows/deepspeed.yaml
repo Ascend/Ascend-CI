@@ -100,9 +100,6 @@ jobs:
           repository: microsoft/DeepSpeed
           path: deepspeed
 
-      - id: setup-venv
-        uses: ./deepspeed/.github/workflows/setup-venv
-
       - name: Install deepspeed dependencies
         run: |
           pip install -r requirements/requirements_deepspeed.txt 
@@ -121,7 +118,7 @@ jobs:
         working-directory: deepspeed/tests/unit
         run: |
           unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
-          
+
           pytest --verbose accelerator/*
           pytest --verbose autotuning/*
           pytest --verbose checkpoint/test_reshape_checkpoint.py
