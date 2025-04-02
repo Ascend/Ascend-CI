@@ -44,16 +44,16 @@ jobs:
         run: |
           npu-smi info
 
-      - name: Config mirrors
-        run: |
-          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
-          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-
       - name: Install system dependencies
         run: |
           apt-get update
           apt-get install -y \
-              git gcc g++ make cmake ninja-build
+              pip git gcc g++ make cmake ninja-build
+
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
       - name: Checkout
         uses: actions/checkout@v4
