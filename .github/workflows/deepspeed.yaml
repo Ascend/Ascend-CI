@@ -74,15 +74,14 @@ jobs:
               tornado \
               ml-dtypes
 
-          python << EOF 
-          if __name__ == '__main__':
-              import torch
-              import torch_npu
-              torch_npu.npu.set_device("npu:0") 
-              print(f"Device Name: {torch.npu.get_device_name(0)}")
-              print(f"Device Count: {torch.npu.device_count()}")
-              print(f"Device Available: {torch.npu.is_available()}")
-          EOF
+      - name: List torch_npu version
+        id: list-version
+        run: |
+          torch_version=$(python -c "import torch; print(torch.__version__)")
+          torch_npu_version=$(python -c "import torch_npu; print(torch_npu.__version__)")
+          echo "torch version: ${torch_version}"
+          echo "torch_npu version: ${torch_npu_version}"
+          echo "torch-npu-version=${torch_npu_version}" >> $GITHUB_OUTPUT
 
       - name: Checkout transformers
         uses: actions/checkout@v4
