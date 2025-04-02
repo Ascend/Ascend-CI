@@ -48,7 +48,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-              pip git gcc g++ make cmake ninja-build
+              git gcc g++ make cmake ninja-build python
 
       - name: Config mirrors
         run: |
