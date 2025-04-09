@@ -2,6 +2,22 @@ name: Unit tests with DeepSpeed on Ascend NPU
 
 on:
   workflow_dispatch:
+    inputs:
+      device:
+        required: true
+        type: choice
+        options:
+          - /dev/davinci0
+          - /dev/davinci1
+          - /dev/davinci2
+          - /dev/davinci3
+          - /dev/davinci4
+          - /dev/davinci5
+          - /dev/davinci6
+          - /dev/davinci7
+        default: '/dev/davinci0'
+        description: 'The device selected to run on'
+        
   pull_request:
     paths:
       - '.github/workflows/deepspeed.yaml'
@@ -25,7 +41,17 @@ defaults:
     shell: bash -el {0}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      device: ${{ steps.set.outputs.device }}
+    steps:
+      - id: set
+        run: |
+          echo "device=${{ github.event.inputs.device || '/dev/davinci0' }}" >> $GITHUB_OUTPUT
+  
   deepspeed-ut:
+    needs: prepare
     if: ${{ github.repository_owner == 'Ascend' }}
     name: Run unit tests with DeepSpeed
     runs-on: [self-hosted, ascend, npu]
@@ -39,7 +65,7 @@ jobs:
         - /etc/ascend_install.info:/etc/ascend_install.info
       options: >-
         --network host
-        --device /dev/davinci0
+        --device ${{ github.event.inputs.device || '/dev/davinci0' }}
         --device /dev/davinci_manager
         --device /dev/devmm_svm
         --device /dev/hisi_hdc
