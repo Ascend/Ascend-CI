@@ -3,6 +3,15 @@ name: Unit tests with DeepSpeed on Ascend NPU
 on:
   workflow_dispatch:
     inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: 'linux-arm64-npu-1'
+        description: 'Runner to run on'
       device:
         required: true
         type: choice
@@ -16,7 +25,7 @@ on:
           - /dev/davinci6
           - /dev/davinci7
         default: '/dev/davinci0'
-        description: 'The device selected to run on'
+        description: 'Device to use'
         
   pull_request:
     paths:
@@ -44,17 +53,19 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
+      runner: ${{ steps.set.outputs.runner }}
       device: ${{ steps.set.outputs.device }}
     steps:
       - id: set
         run: |
+          echo "runner=${{ github.event.inputs.runner || 'self-hosted' }}" >> $GITHUB_OUTPUT
           echo "device=${{ github.event.inputs.device || '/dev/davinci0' }}" >> $GITHUB_OUTPUT
   
   deepspeed-ut:
     needs: prepare
     if: ${{ github.repository_owner == 'Ascend' }}
     name: Run unit tests with DeepSpeed
-    runs-on: [self-hosted, ascend, npu]
+    runs-on: ${{ github.event.inputs.runner || 'self-hosted' }}
     container:
       image: ascendai/cann:latest
       volumes:
