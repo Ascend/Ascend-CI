@@ -2,10 +2,40 @@ name: Unit tests with DeepSpeed on Ascend NPU
 
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - self-hosted
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: 'linux-arm64-npu-1'
+        description: 'Runner to run on'
+      device:
+        required: true
+        type: choice
+        options:
+          - /dev/davinci0
+          - /dev/davinci1
+          - /dev/davinci2
+          - /dev/davinci3
+          - /dev/davinci4
+          - /dev/davinci5
+          - /dev/davinci6
+          - /dev/davinci7
+        default: '/dev/davinci0'
+        description: 'Device to use'
+        
   pull_request:
     paths:
       - '.github/workflows/deepspeed.yaml'
       - 'requirements/**'
+  push:
+    branches: 
+      - 'deepspeed'
+  
   schedule:
     - cron: "0 0 * * *"
 
@@ -21,21 +51,27 @@ defaults:
     shell: bash -el {0}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.set.outputs.runner }}
+      device: ${{ steps.set.outputs.device }}
+    steps:
+      - id: set
+        run: |
+          echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
+          echo "device=${{ github.event.inputs.device || '/dev/davinci0' }}" >> $GITHUB_OUTPUT
+  
   deepspeed-ut:
+    needs: prepare
     if: ${{ github.repository_owner == 'Ascend' }}
     name: Run unit tests with DeepSpeed
-    runs-on: [self-hosted, ascend, npu]
+    runs-on: ${{ github.event.inputs.runner }}
     container:
       image: ascendai/cann:latest
-      volumes:
-        - /usr/local/dcmi:/usr/local/dcmi
-        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi
-        - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
-        - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
-        - /etc/ascend_install.info:/etc/ascend_install.info
       options: >-
         --network host
-        --device /dev/davinci0
+        --device ${{ github.event.inputs.device }}
         --device /dev/davinci_manager
         --device /dev/devmm_svm
         --device /dev/hisi_hdc
@@ -43,12 +79,12 @@ jobs:
       - name: Show NPU info
         run: |
           npu-smi info
-
+          
       - name: Install system dependencies
         run: |
           apt-get update
           apt-get install -y \
-              git gcc g++ make cmake ninja-build python
+              git gcc g++ make cmake ninja-build python-is-python3 python3-pip
 
       - name: Config mirrors
         run: |
