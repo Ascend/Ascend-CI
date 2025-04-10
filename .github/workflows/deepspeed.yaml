@@ -7,6 +7,7 @@ on:
         required: true
         type: choice
         options:
+          - self-hosted
           - linux-arm64-npu-1
           - linux-arm64-npu-2
           - linux-arm64-npu-4
@@ -58,25 +59,19 @@ jobs:
     steps:
       - id: set
         run: |
-          echo "runner=${{ github.event.inputs.runner || 'self-hosted' }}" >> $GITHUB_OUTPUT
+          echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
           echo "device=${{ github.event.inputs.device || '/dev/davinci0' }}" >> $GITHUB_OUTPUT
   
   deepspeed-ut:
     needs: prepare
     if: ${{ github.repository_owner == 'Ascend' }}
     name: Run unit tests with DeepSpeed
-    runs-on: ${{ github.event.inputs.runner || 'self-hosted' }}
+    runs-on: ${{ github.event.inputs.runner }}
     container:
       image: ascendai/cann:latest
-      # volumes:
-      #   - /usr/local/dcmi:/usr/local/dcmi
-      #   - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi
-      #   - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
-      #   - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
-      #   - /etc/ascend_install.info:/etc/ascend_install.info
       options: >-
         --network host
-        --device ${{ github.event.inputs.device || '/dev/davinci0' }}
+        --device ${{ github.event.inputs.device }}
         --device /dev/davinci_manager
         --device /dev/devmm_svm
         --device /dev/hisi_hdc
