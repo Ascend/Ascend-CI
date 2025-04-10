@@ -59,5 +59,21 @@ The Deepspeed source code is from `main` branch of `microsoft/deepspeed` and wil
 | Status  | ![Deepspeed](https://github.com/Ascend/Ascend-CI/actions/workflows/deepspeed.yaml/badge.svg) |
 | Recheck By Hand | comment 'recheck' in any issue |
 
+
+## Llama.cpp Ascend CI
+The Llama.cpp source code is from `main` branch of `ggml-org/llama.cpp` and will be run and tested daily with Ascend related.
+
+------------------------------------------------------------
+
+| Key  | Value |
+| :---: | :---: |
+| CPU  | Arm64 |
+| NPU | Ascend910B3 |
+| OS | Openeuler |
+| Period | UTC 1200 daily |
+| Branch  | main |
+| Status  | ![Llama.cpp](https://github.com/Ascend/Ascend-CI/actions/workflows/llamacpp.yaml/badge.svg) |
+| Recheck By Hand | comment 'recheck' in any issue |
+
 ## Pytorch Ascend CI
 TBD
