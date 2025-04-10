@@ -68,12 +68,12 @@ jobs:
     runs-on: ${{ github.event.inputs.runner || 'self-hosted' }}
     container:
       image: ascendai/cann:latest
-      volumes:
-        - /usr/local/dcmi:/usr/local/dcmi
-        - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi
-        - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
-        - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
-        - /etc/ascend_install.info:/etc/ascend_install.info
+      # volumes:
+      #   - /usr/local/dcmi:/usr/local/dcmi
+      #   - /usr/local/bin/npu-smi:/usr/local/bin/npu-smi
+      #   - /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/
+      #   - /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info
+      #   - /etc/ascend_install.info:/etc/ascend_install.info
       options: >-
         --network host
         --device ${{ github.event.inputs.device || '/dev/davinci0' }}
