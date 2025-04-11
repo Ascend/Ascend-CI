@@ -34,7 +34,7 @@ on:
       - 'requirements/**'
   push:
     branches: 
-      - 'deepspeed'
+      - 'main'
   
   schedule:
     - cron: "0 0 * * *"
@@ -66,12 +66,12 @@ jobs:
     needs: prepare
     if: ${{ github.repository_owner == 'Ascend' }}
     name: Run unit tests with DeepSpeed
-    runs-on: ${{ github.event.inputs.runner }}
+    runs-on: ${{ needs.prepare.outputs.runner }}
     container:
       image: ascendai/cann:latest
       options: >-
         --network host
-        --device ${{ github.event.inputs.device }}
+        --device ${{ needs.prepare.outputs.device }}
         --device /dev/davinci_manager
         --device /dev/devmm_svm
         --device /dev/hisi_hdc
