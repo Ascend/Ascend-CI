@@ -28,7 +28,7 @@ jobs:
       matrix:
         arch: [x86, aarch64]
         cann:
-          - '8.1.rc1.beta1-910b-openeuler22.03-py3.10'
+          - '8.1.RC1.alpha001-910b-openeuler22.03-py3.10'
         device:
           - 'ascend910b3'
         build:
