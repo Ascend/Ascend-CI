@@ -84,6 +84,7 @@ jobs:
           path: torchchat
           
       - name: Install dependencies
+        working-directory: torchchat
         run: |
           set -xeou pipefail
           echo "::group::Print machine info"
