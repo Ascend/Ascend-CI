@@ -126,7 +126,7 @@ jobs:
       - name: Install torch_npu
         run: |
           python setup.py build bdist_wheel
-          pip install ${{ls torch_npu*.whl}}
+          pip install ${ls torch_npu*.whl}
 
       - name: List envs
         run: |
