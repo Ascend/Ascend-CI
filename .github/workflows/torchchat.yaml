@@ -110,10 +110,27 @@ jobs:
           # Install requirements
           ./install/install_requirements.sh
 
+      - name: Checkout torch_npu
+        uses: actions/checkout@v4
+        with:
+          repository: Ascend/pytorch
+          submodules: recursive
+          path: torch_npu
+
+      - name: Install torch_npu dependencies
+        working-directory: torch_npu
+        run: |
+          pip install wheel
+          pip install -r requirements.txt
+
       - name: Install torch_npu
         run: |
-          wget https://github.com/cosdt/pytorch-integration-tests/actions/runs/14128766665
-          pip install $(ls torch_npu*.whl)
+          python setup.py build bdist_wheel
+          pip install ${{ls torch_npu*.whl}}
+
+      - name: List envs
+        run: |
+          pip list
 
       - name: Download checkpoints
         run: |
