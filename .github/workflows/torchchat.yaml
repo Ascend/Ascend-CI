@@ -114,6 +114,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Ascend/pytorch
+          submodules: true
           path: torch_npu
 
       - name: Install torch_npu dependencies
