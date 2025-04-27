@@ -68,7 +68,7 @@ jobs:
     name: Run unit tests with DeepSpeed
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
-      image: ascendai/cann:8.0.0-910b-ubuntu22.04-py3.11
+      image: ascendai/cann:ubuntu-python3.10-cann8.0.0
       options: >-
         --network host
         --device ${{ needs.prepare.outputs.device }}
@@ -127,7 +127,7 @@ jobs:
         working-directory: torch_npu
         run: |
           python setup.py build bdist_wheel
-          pip install ${ls torch_npu*.whl}
+          pip install dist/${ls torch_npu*.whl}
 
       - name: List envs
         run: |
