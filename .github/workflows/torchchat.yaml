@@ -92,23 +92,23 @@ jobs:
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
           pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
           
-      - name: Checkout torchchat
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/torchchat
-          path: torchchat
+      # - name: Checkout torchchat
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: pytorch/torchchat
+      #     path: torchchat
           
-      - name: Install dependencies
-        working-directory: torchchat
-        run: |
-          set -xeou pipefail
-          echo "::group::Print machine info"
-          uname -a
-          echo "::endgroup::"
+      # - name: Install dependencies
+      #   working-directory: torchchat
+      #   run: |
+      #     set -xeou pipefail
+      #     echo "::group::Print machine info"
+      #     uname -a
+      #     echo "::endgroup::"
     
-          echo "::group::Download checkpoints"
-          # Install requirements
-          ./install/install_requirements.sh
+      #     echo "::group::Download checkpoints"
+      #     # Install requirements
+      #     ./install/install_requirements.sh
 
       - name: Checkout torch_npu
         uses: actions/checkout@v4
@@ -126,9 +126,27 @@ jobs:
       - name: Install torch_npu
         working-directory: torch_npu
         run: |
-          python setup.py build bdist_wheel
-          pip install dist/${ls torch_npu*.whl}
-
+          python setup.py build build_py
+          # pip install dist/${ls torch_npu*.whl}
+          
+      - name: Checkout torchchat
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/torchchat
+          path: torchchat
+          
+      - name: Install dependencies
+        working-directory: torchchat
+        run: |
+          set -xeou pipefail
+          echo "::group::Print machine info"
+          uname -a
+          echo "::endgroup::"
+    
+          echo "::group::Download checkpoints"
+          # Install requirements
+          ./install/install_requirements.sh
+          
       - name: List envs
         run: |
           pip list
