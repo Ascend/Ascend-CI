@@ -123,6 +123,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install torch_npu
+        working-directory: torch_npu
         run: |
           python setup.py build bdist_wheel
           pip install ${ls torch_npu*.whl}
@@ -132,6 +133,7 @@ jobs:
           pip list
 
       - name: Download checkpoints
+        working-directory: torchchat
         run: |
           pip3 list
           python3 -c 'import torch;print(f"torch: {torch.__version__, torch.version.git_version}")'
@@ -151,6 +153,7 @@ jobs:
           export MODEL_NAME=stories15M
     
       - name: Run inderence
+        working-directory: torchchat
         run: |
           for DTYPE in bfloat16 float16 float32; do
             ###################################################################
