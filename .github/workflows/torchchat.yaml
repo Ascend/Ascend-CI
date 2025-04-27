@@ -68,7 +68,7 @@ jobs:
     name: Run unit tests with DeepSpeed
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
-      image: ascendai/cann:latest
+      image: ascendai/cann:8.0.0-910b-ubuntu22.04-py3.11
       options: >-
         --network host
         --device ${{ needs.prepare.outputs.device }}
