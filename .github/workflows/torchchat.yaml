@@ -1,4 +1,4 @@
-name: Unit tests with DeepSpeed on Ascend NPU
+name: torchchat on Ascend NPU
 
 on:
   workflow_dispatch:
@@ -126,8 +126,8 @@ jobs:
       - name: Install torch_npu
         working-directory: torch_npu
         run: |
-          python setup.py build build_py
-          # pip install dist/${ls torch_npu*.whl}
+          python setup.py build bdist_wheel
+          pip install dist/${ls torch_npu*.whl}
           
       - name: Checkout torchchat
         uses: actions/checkout@v4
