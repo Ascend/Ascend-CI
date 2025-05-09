@@ -84,7 +84,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-              numactl pdsh
+              numactl pdsh sudo
               # git gcc g++ make cmake ninja-build python-is-python3 python3-pip
 
       - name: Config mirrors
