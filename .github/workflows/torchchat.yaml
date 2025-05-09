@@ -13,6 +13,15 @@ on:
           - linux-arm64-npu-4
         default: 'linux-arm64-npu-1'
         description: 'Runner to run on'
+      image:
+        required: true
+        type: choice
+        options:
+          - ascendai/cann:7.0.1-910b-ubuntu22.04-py3.8
+          - ascendai/cann:8.0.0-910b-ubuntu22.04-py3.10
+          - ascendai/cann:latest
+        default: "ascendai/cann:latest"
+        description: "Load docker image"
       device:
         required: true
         type: choice
@@ -55,11 +64,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       runner: ${{ steps.set.outputs.runner }}
+      image: ${{ steps.set.outputs.image }}
       device: ${{ steps.set.outputs.device }}
     steps:
       - id: set
         run: |
           echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
+          echo "image=${{ github.event.inputs.image || 'ascendai/cann:latest' }}" >> $GITHUB_OUTPUT
           echo "device=${{ github.event.inputs.device || '/dev/davinci0' }}" >> $GITHUB_OUTPUT
   
   torchchat-test:
@@ -68,7 +79,7 @@ jobs:
     name: Run unit tests with DeepSpeed
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
-      image: ascendai/cann:ubuntu-python3.10-cann8.0.0
+      image: ${{ needs.prepare.outputs.image }}
       options: >-
         --network host
         --device ${{ needs.prepare.outputs.device }}
