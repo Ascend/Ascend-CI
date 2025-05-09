@@ -139,14 +139,16 @@ jobs:
       - name: build torch_npu
         working-directory: torch_npu
         run: |
-          bash ci/build.sh --python=$(python --version | awk '{print $2}' | cut -d '.' -f 1,2)
+          python-version=$(python --version | awk '{print $2}' | cut -d '.' -f 1,2) 
+          bash ci/build.sh --python=$python-version
         env:
           _GLIBCXX_USE_CXX11_ABI: 1 # https://gitee.com/ascend/pytorch/issues/IBJFZY
           MAX_JOBS: 8
       - name: Install torch_npu
         working-directory: torch_npu/dist
         run: |
-           pip install ${ls torch_npu*.whl}
+           dist_name=${ls torch_npu*.whl}  
+           pip install $dist_name
           
       - name: Checkout torchchat
         uses: actions/checkout@v4
