@@ -42,6 +42,8 @@ on:
       - '.github/workflows/torchchat.yaml'
       - 'requirements/**'
   push:
+    paths:
+      - '.github/workflows/torchchat.yaml'
     branches: 
       - 'torchchat'
   
