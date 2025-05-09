@@ -79,9 +79,6 @@ jobs:
       - name: Show NPU info
         run: |
           npu-smi info
-
-      - id: setup-venv
-        uses: ./.github/workflows/setup-venv
         
       - name: Install system dependencies
         run: |
@@ -135,6 +132,9 @@ jobs:
         with:
           repository: microsoft/DeepSpeed
           path: deepspeed
+
+      - id: setup-venv
+        uses: ./deepspeed/.github/workflows/setup-venv
 
       - name: Install deepspeed dependencies
         run: |
