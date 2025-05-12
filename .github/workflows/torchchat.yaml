@@ -161,10 +161,13 @@ jobs:
           echo "::group::Print machine info"
           uname -a
           echo "::endgroup::"
-    
+
+          pip install torchvision==0.22.0 torchtune==0.6.0
           echo "::group::Download checkpoints"
           # Install requirements
           ./install/install_requirements.sh
+
+          pip install torchvision==0.22.0 torchtune==0.6.0
 
       - name: Download huggingface-cli
         run: |
