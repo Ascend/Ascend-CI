@@ -188,14 +188,12 @@ jobs:
           popd
           echo "::endgroup::"
     
-          echo "::group::Run inference"
-          export MODEL_DIR=checkpoints/stories15M/
-          export MODEL_PATH=${MODEL_DIR}/stories15M.pt
-          export MODEL_NAME=stories15M
-    
       - name: Run inderence
         working-directory: torchchat
         run: |
+          export MODEL_DIR=checkpoints/stories15M/
+          export MODEL_PATH=${MODEL_DIR}/stories15M.pt
+          export MODEL_NAME=stories15M
           for DTYPE in bfloat16 float16 float32; do
             ###################################################################
             # group with different temperatures
