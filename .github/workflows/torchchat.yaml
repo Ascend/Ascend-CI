@@ -105,38 +105,11 @@ jobs:
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
           pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
            
-      - name: Checkout torchchat
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/torchchat
-          path: torchchat
-
-      - name: Download huggingface-cli
-        run: |
-          pip install -U huggingface_hub
-
-      - name: Download checkpoints
-        working-directory: torchchat
-        env:
-          MAX_JOBS: 5
-        run: |
-          # pip3 list
-          # python3 -c 'import torch;print(f"torch: {torch.__version__, torch.version.git_version}")'
-          # echo "::endgroup::"
-          export HF_ENDPOINT=https://hf-mirror.com
-          
-          echo "::group::Download checkpoints"
-          mkdir -p checkpoints/stories15M
-          pushd checkpoints/stories15M
-          huggingface-cli download --resume-download karpathy/tinyllamas --include stories15M.pt --local-dir ./
-          wget https://github.com/karpathy/llama2.c/raw/master/tokenizer.model
-          popd
-          echo "::endgroup::"
-    
-          echo "::group::Run inference"
-          export MODEL_DIR=checkpoints/stories15M/
-          export MODEL_PATH=${MODEL_DIR}/stories15M.pt
-          export MODEL_NAME=stories15M
+      # - name: Checkout torchchat
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: pytorch/torchchat
+      #     path: torchchat
           
       # - name: Install dependencies
       #   working-directory: torchchat
@@ -175,11 +148,11 @@ jobs:
         run: |
            pip install $(ls torch_npu*.whl)
           
-      # - name: Checkout torchchat
-      #   uses: actions/checkout@v4
-      #   with:
-      #     repository: pytorch/torchchat
-      #     path: torchchat
+      - name: Checkout torchchat
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/torchchat
+          path: torchchat
           
       - name: Install dependencies
         working-directory: torchchat
@@ -192,6 +165,33 @@ jobs:
           echo "::group::Download checkpoints"
           # Install requirements
           ./install/install_requirements.sh
+
+      - name: Download huggingface-cli
+        run: |
+          pip install -U huggingface_hub
+
+      - name: Download checkpoints
+        working-directory: torchchat
+        env:
+          MAX_JOBS: 5
+        run: |
+          pip3 list
+          python3 -c 'import torch;print(f"torch: {torch.__version__, torch.version.git_version}")'
+          echo "::endgroup::"
+          
+          echo "::group::Download checkpoints"
+          mkdir -p checkpoints/stories15M
+          pushd checkpoints/stories15M
+          export HF_ENDPOINT=https://hf-mirror.com
+          huggingface-cli download --resume-download karpathy/tinyllamas --include stories15M.pt --local-dir ./
+          wget https://github.com/karpathy/llama2.c/raw/master/tokenizer.model
+          popd
+          echo "::endgroup::"
+    
+          echo "::group::Run inference"
+          export MODEL_DIR=checkpoints/stories15M/
+          export MODEL_PATH=${MODEL_DIR}/stories15M.pt
+          export MODEL_NAME=stories15M
     
       - name: Run inderence
         working-directory: torchchat
