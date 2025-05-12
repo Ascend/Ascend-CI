@@ -104,6 +104,12 @@ jobs:
         run: |
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
           pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+           
+      - name: Checkout torchchat
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/torchchat
+          path: torchchat
 
       - name: Download huggingface-cli
         run: |
@@ -113,9 +119,9 @@ jobs:
       - name: Download checkpoints
         working-directory: torchchat
         run: |
-          pip3 list
-          python3 -c 'import torch;print(f"torch: {torch.__version__, torch.version.git_version}")'
-          echo "::endgroup::"
+          # pip3 list
+          # python3 -c 'import torch;print(f"torch: {torch.__version__, torch.version.git_version}")'
+          # echo "::endgroup::"
     
           echo "::group::Download checkpoints"
           mkdir -p checkpoints/stories15M
@@ -129,12 +135,6 @@ jobs:
           export MODEL_DIR=checkpoints/stories15M/
           export MODEL_PATH=${MODEL_DIR}/stories15M.pt
           export MODEL_NAME=stories15M
-          
-      # - name: Checkout torchchat
-      #   uses: actions/checkout@v4
-      #   with:
-      #     repository: pytorch/torchchat
-      #     path: torchchat
           
       # - name: Install dependencies
       #   working-directory: torchchat
@@ -173,11 +173,11 @@ jobs:
         run: |
            pip install $(ls torch_npu*.whl)
           
-      - name: Checkout torchchat
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/torchchat
-          path: torchchat
+      # - name: Checkout torchchat
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: pytorch/torchchat
+      #     path: torchchat
           
       - name: Install dependencies
         working-directory: torchchat
