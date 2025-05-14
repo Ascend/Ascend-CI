@@ -223,14 +223,14 @@ jobs:
             python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 100 --sequential-prefill
             python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 200 --sequential-prefill
             python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 500 --sequential-prefill
-            ###################################################################
-            # group with different temperatures and prefill, and compile
-            python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --temperature 0 --sequential-prefill --compile
-            python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --temperature 0.9 --sequential-prefill --compile
-            python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --temperature 1.0 --sequential-prefill --compile
-            python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 100 --sequential-prefill --compile
-            python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 200 --sequential-prefill --compile
-            python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 500 --sequential-prefill --compile
+            # ###################################################################
+            # # group with different temperatures and prefill, and compile
+            # python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --temperature 0 --sequential-prefill --compile
+            # python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --temperature 0.9 --sequential-prefill --compile
+            # python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --temperature 1.0 --sequential-prefill --compile
+            # python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 100 --sequential-prefill --compile
+            # python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 200 --sequential-prefill --compile
+            # python torchchat.py generate --checkpoint-path ${MODEL_PATH} --dtype ${DTYPE} --top-k 500 --sequential-prefill --compile
 
           
             # ###################################################################
