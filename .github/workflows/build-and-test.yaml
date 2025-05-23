@@ -18,13 +18,11 @@ jobs:
       - name: Pull latest codes
         run:
           sudo su - root -c "pushd /root/Git.d/onnxruntime &&
-          git stash &&
           git fetch --all &&
           git rebase upstream/main &&
           git submodule update --init --recursive &&
           git reset --hard HEAD &&
           git clean -dfx &&
-          git stash pop &&
           popd"
 
       - name: Build and test onnx runtime
