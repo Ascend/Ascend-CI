@@ -23,7 +23,7 @@ jobs:
         run: |
           docker run --rm \
             -v ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI \
-            -v /root/.last_tag:/root/.last_tag \
+            -v /home/last_tag.txt:/root/last_tag.txt \
             -e PYPI_TOKEN \
             pypi:latest \
             bash -c "chmod +x /root/Ascend-CI/script/pypiPkg.sh && /root/Ascend-CI/script/pypiPkg.sh"
@@ -45,7 +45,7 @@ jobs:
           run: |
             docker run --rm \
               -v ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI \
-              -v /root/.last_tag:/root/.last_tag \
+              -v /home/last_tag.txt:/root/last_tag.txt \
               -e PYPI_TOKEN \
               pypi:latest \
               bash -c "chmod +x /root/Ascend-CI/script/pypiPkg.sh && /root/Ascend-CI/script/pypiPkg.sh"
