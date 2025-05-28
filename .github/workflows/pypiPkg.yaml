@@ -8,7 +8,7 @@ on:
 jobs:
   build-x86:
     name: Build for x86_64
-    if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule') }}
+    if: ${{ github.repository_owner == 'Ascend' && github.event_name == 'schedule' }}
     runs-on: ONNXRuntime
     steps:
       - name: Clone ASCEND-CI project
