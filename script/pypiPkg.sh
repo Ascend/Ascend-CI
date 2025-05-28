@@ -56,7 +56,7 @@ REPO_URL="https://github.com/$REPO.git"
 STATE_FILE="/root/last_tag.txt"
 MAX_RETRIES=10
 WAIT_SECONDS=60
-
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 获取最新 tag
 LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | grep '"name":' | head -n 1 | cut -d '"' -f 4)
 # 获取之前已上传记录的 tag
