@@ -51,7 +51,7 @@ echo "================ Cron job started at $(date) ================"
 REPO="microsoft/onnxruntime"
 API="https://api.github.com/repos/$REPO/tags"
 REPO_URL="https://github.com/$REPO.git"
-STATE_FILE="/root/.last_tag"
+STATE_FILE="/root/last_tag.txt"
 MAX_RETRIES=10
 WAIT_SECONDS=60
 
