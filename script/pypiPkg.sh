@@ -10,8 +10,6 @@ username = __token__
 password = $PYPI_TOKEN
 EOF
 
-cat ~/.pypirc
-
 build_and_upload() {
   local TAG="$1"
   local CLONE_SUCCESS=0
@@ -53,14 +51,17 @@ echo "================ Cron job started at $(date) ================"
 REPO="microsoft/onnxruntime"
 API="https://api.github.com/repos/$REPO/tags"
 REPO_URL="https://github.com/$REPO.git"
-STATE_FILE="/root/last_tag.txt"
+STATE_FILE="/root/.last_tag"
 MAX_RETRIES=10
 WAIT_SECONDS=60
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
 # 获取最新 tag
 LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | grep '"name":' | head -n 1 | cut -d '"' -f 4)
-# 获取之前已上传记录的 tag
+
 LAST_TAG=""
+# 获取之前已上传的 tag
 if [ -s "$STATE_FILE" ]; then
     LAST_TAG=$(cat "$STATE_FILE")
 fi
