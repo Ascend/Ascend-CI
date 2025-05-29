@@ -35,6 +35,9 @@ on:
   push:
     branches: 
       - 'main'
+    paths:
+      - '.github/workflows/deepspeed.yaml'
+      - 'requirements/**'
   
   schedule:
     - cron: "0 0 * * *"
