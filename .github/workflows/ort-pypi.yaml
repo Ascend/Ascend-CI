@@ -9,6 +9,13 @@ jobs:
   build-x86:
     name: Build for x86_64
     runs-on: ONNXRuntime
+    container:
+      image: pypi:latest
+      env:
+        PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      volumes:
+        - ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI
+        - /home/last_tag.txt:/root/last_tag.txt
     steps:
       - name: Clone ASCEND-CI project
         uses: actions/checkout@v4
@@ -17,36 +24,31 @@ jobs:
           path: Ascend-CI
 
       - name: Build and upload pypi
-        env:
-          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        working-directory: Ascend-CI
+        working-directory: /root/Ascend-CI
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI \
-            -v /home/last_tag.txt:/root/last_tag.txt \
-            -e PYPI_TOKEN \
-            pypi:latest \
-            bash -c "chmod +x /root/Ascend-CI/script/pypiPkg.sh && /root/Ascend-CI/script/pypiPkg.sh"
-          
-  build-aarch:
-      name: Build for aarch
-      runs-on: pypi-aarch
-      steps:
-        - name: Clone ASCEND-CI project
-          uses: actions/checkout@v4
-          with:
-            repository: Ascend/Ascend-CI
-            path: Ascend-CI
+          chmod +x ./script/pypiPkg.sh
+          ./script/pypiPkg.sh
 
-        - name: Build and upload pypi
-          env:
-            PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-          working-directory: Ascend-CI
-          run: |
-            docker run --rm \
-              -v ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI \
-              -v /home/last_tag.txt:/root/last_tag.txt \
-              -e PYPI_TOKEN \
-              pypi:latest \
-              bash -c "chmod +x /root/Ascend-CI/script/pypiPkg.sh && /root/Ascend-CI/script/pypiPkg.sh"
+          
+  # build-aarch:
+  #     name: Build for aarch
+  #     runs-on: pypi-aarch
+  #     steps:
+  #       - name: Clone ASCEND-CI project
+  #         uses: actions/checkout@v4
+  #         with:
+  #           repository: Ascend/Ascend-CI
+  #           path: Ascend-CI
+
+  #       - name: Build and upload pypi
+  #         env:
+  #           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+  #         working-directory: Ascend-CI
+  #         run: |
+  #           docker run --rm \
+  #             -v ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI \
+  #             -v /home/last_tag.txt:/root/last_tag.txt \
+  #             -e PYPI_TOKEN \
+  #             pypi:latest \
+  #             bash -c "chmod +x /root/Ascend-CI/script/pypiPkg.sh && /root/Ascend-CI/script/pypiPkg.sh"
           
