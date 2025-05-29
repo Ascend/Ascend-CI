@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 11 * * 7'
 
+  push:
+    paths:
+      - '.github/workflows/ort-pypi.yaml'
+
 jobs:
   build:
     name: Build for ${{ matrix.arch }}
