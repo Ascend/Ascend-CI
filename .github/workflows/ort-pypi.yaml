@@ -10,7 +10,7 @@ jobs:
     name: Build for x86_64
     runs-on: ONNXRuntime
     container:
-      image: pypi:latest
+      image: bachelor233/manylinux2_28-py310-cann8_1_x86_64
       env:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       volumes:
