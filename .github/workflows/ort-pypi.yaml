@@ -6,16 +6,27 @@ on:
     - cron: '0 12 * * *'
 
 jobs:
-  build-x86:
-    name: Build for x86_64
-    runs-on: ONNXRuntime
+  build:
+    name: Build for ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     container:
-      image: bachelor233/manylinux2_28-py310-cann8_1_x86_64
+      image: ${{ matrix.image }}
       env:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       volumes:
         - ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI
         - /home/last_tag.txt:/root/last_tag.txt
+
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ONNXRuntime
+            image: bachelor233/manylinux2_28-py310-cann8_1_x86_64
+          - arch: aarch
+            runner: pypi-aarch
+            image: bachelor233/manylinux2_28-py310-cann8_1_aarch
+
     steps:
       - name: Clone ASCEND-CI project
         uses: actions/checkout@v4
@@ -28,27 +39,3 @@ jobs:
         run: |
           chmod +x ./script/pypiPkg.sh
           ./script/pypiPkg.sh
-
-          
-  # build-aarch:
-  #     name: Build for aarch
-  #     runs-on: pypi-aarch
-  #     steps:
-  #       - name: Clone ASCEND-CI project
-  #         uses: actions/checkout@v4
-  #         with:
-  #           repository: Ascend/Ascend-CI
-  #           path: Ascend-CI
-
-  #       - name: Build and upload pypi
-  #         env:
-  #           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-  #         working-directory: Ascend-CI
-  #         run: |
-  #           docker run --rm \
-  #             -v ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI \
-  #             -v /home/last_tag.txt:/root/last_tag.txt \
-  #             -e PYPI_TOKEN \
-  #             pypi:latest \
-  #             bash -c "chmod +x /root/Ascend-CI/script/pypiPkg.sh && /root/Ascend-CI/script/pypiPkg.sh"
-          
