@@ -107,7 +107,9 @@ jobs:
       - name: Install torchtune
         working-directory: torchtune
         run: |
-          pip install -e .
+          # pip install -e .
+          pip install torch==2.8.0 torchao torchvision
+          pip install torchtune
       
       - name: Download Qwen2.5 model
         run: |
