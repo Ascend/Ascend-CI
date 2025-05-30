@@ -108,7 +108,7 @@ jobs:
         working-directory: torchtune
         run: |
           # pip install -e .
-          pip install torch==2.8.0 torchao torchvision
+          pip install torch torchao torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
           pip install torchtune
       
       - name: Download Qwen2.5 model
