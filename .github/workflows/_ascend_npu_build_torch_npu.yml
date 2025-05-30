@@ -1,0 +1,146 @@
+name: "_ascend_npu_build"
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: true
+        type: string
+        description: "The runner selected to run on"
+      image:
+        required: true
+        type: string
+        description: "The docker image which will be used to build"
+      device:
+        required: true
+        type: string
+        description: "The device selected to run on"
+      torch-artifact:
+        required: false
+        type: string
+        description: "The distribution artifact name of torch"
+    outputs:
+      torch-npu-artifact:
+        description: "The distribution artifact name of torch_npu"
+        value: ${{ jobs.build.outputs.dist-name }}
+
+# Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
+# declared as "shell: bash -el {0}" on steps that need to be properly activated.
+# It's used to activate ascend-toolkit environment variables.
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  build:
+    name: build torch_npu
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.image }}
+    outputs:
+      dist-name: ${{ steps.list-dist.outputs.dist-name }}
+    steps:
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y git gcc g++ make cmake ninja-build
+
+      # See: https://github.com/actions/checkout/issues/363#issuecomment-1915075699
+      # See: https://github.com/hunshcn/gh-proxy/issues/28#issuecomment-773769630
+      - name: Config git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global url."https://gh-proxy.test.osinfra.cn/https://github.com/".insteadOf https://github.com/
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout torch_npu
+        uses: actions/checkout@v4
+        with:
+          repository: Ascend/pytorch
+          submodules: recursive
+          path: torch_npu
+
+      - name: Install torch_npu dependencies
+        working-directory: torch_npu
+        run: |
+          pip install wheel
+          pip install -r requirements.txt
+
+      # TODO
+      # - name: Install torch
+      #   id: install-torch
+      #   uses: ./.github/actions/install-artifact
+      #   with:
+      #     artifact: ${{ inputs.torch-artifact }}
+
+      - name: Download torch artifact
+        if: ${{ inputs.torch-artifact }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.torch-artifact }}
+
+      - name: Install torch
+        if: ${{ inputs.torch-artifact }}
+        run: |
+          pip install ${{ inputs.torch-artifact }}
+
+      - name: List Python version
+        id: list-py-version
+        working-directory: torch_npu
+        run: |
+          py_version=$(python --version | awk '{print $2}' | cut -d '.' -f 1,2)
+          echo "py-version=${py_version}" >> $GITHUB_OUTPUT
+
+      - name: Build torch_npu
+        working-directory: torch_npu
+        run: |
+          bash ci/build.sh --python=${{ steps.list-py-version.outputs.py-version }}
+        env:
+          _GLIBCXX_USE_CXX11_ABI: 1 # https://gitee.com/ascend/pytorch/issues/IBJFZY
+          MAX_JOBS: 8
+
+      - name: List distribution package
+        id: list-dist
+        working-directory: torch_npu/dist
+        run: |
+          dist_name=$(ls torch_npu*.whl)
+          dist_path=$(pwd)/${dist_name}
+          echo "dist-name=${dist_name}" >> $GITHUB_OUTPUT
+          echo "dist-path=${dist_path}" >> $GITHUB_OUTPUT
+
+      - name: Install torch_npu
+        working-directory: torch_npu/dist
+        run: |
+          pip install ${{ steps.list-dist.outputs.dist-name }}
+
+      - name: List torch_npu version
+        id: list-version
+        run: |
+          torch_version=$(python -c "import torch; print(torch.__version__)")
+          torch_npu_version=$(python -c "import torch_npu; print(torch_npu.__version__)")
+          echo "torch version: ${torch_version}"
+          echo "torch_npu version: ${torch_npu_version}"
+          echo "torch-npu-version=${torch_npu_version}" >> $GITHUB_OUTPUT
+
+      - name: Upload distribution artifact
+        id: upload-dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.list-dist.outputs.dist-name }}
+          path: ${{ steps.list-dist.outputs.dist-path }}
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+      - name: Write to workflow job summary
+        if: ${{ steps.upload-dist.outputs.artifact-url }}
+        run: |
+          echo "## torch_npu-${{ steps.list-version.outputs.torch-npu-version }} built successfully! :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "You can download the distribution package [here](${{ steps.upload-dist.outputs.artifact-url }})." >> $GITHUB_STEP_SUMMARY

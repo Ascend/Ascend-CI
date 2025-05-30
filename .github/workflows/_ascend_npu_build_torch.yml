@@ -1,0 +1,122 @@
+name: "_ascend_npu_build_torch"
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: true
+        type: string
+        description: "The runner selected to run on"
+      image:
+        required: true
+        type: string
+        description: "The docker image which will be used to build"
+      pr-number:
+        required: false
+        type: string
+        default: ""
+        description: "The number of pull request"
+      ref:
+        required: false
+        type: string
+        default: "refs/heads/main"
+        description: "The branch, tag or SHA to checkout"
+    outputs:
+      torch-artifact:
+        description: "The distribution artifact name of torch"
+        value: ${{ jobs.build.outputs.dist-name }}
+
+# Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
+# declared as "shell: bash -el {0}" on steps that need to be properly activated.
+# It's used to activate ascend-toolkit environment variables.
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  build:
+    name: build torch for ${{ inputs.pr-number && format('#{0}', inputs.pr-number) || inputs.ref }}
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.image }}
+    outputs:
+      dist-name: ${{ steps.list-dist.outputs.dist-name }}
+    steps:
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y git gcc g++ make cmake ninja-build
+
+      # See: https://github.com/actions/checkout/issues/363#issuecomment-1915075699
+      # See: https://github.com/hunshcn/gh-proxy/issues/28#issuecomment-773769630
+      - name: Config git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global url."https://gh-proxy.test.osinfra.cn/https://github.com/".insteadOf https://github.com/
+
+      - name: Checkout PyTorch
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/pytorch
+          ref: ${{ inputs.ref }}
+          submodules: recursive
+          path: pytorch
+
+      - name: View commit history
+        working-directory: pytorch
+        run: |
+          git log -n 10 --graph | cat
+
+      - name: Install torch dependencies
+        working-directory: pytorch
+        run: |
+          pip install -r requirements.txt
+
+      - name: Build torch
+        working-directory: pytorch
+        run: |
+          python setup.py build bdist_wheel
+        env:
+          MAX_JOBS: 8
+
+      - name: List distribution package
+        id: list-dist
+        working-directory: pytorch/dist
+        run: |
+          dist_name=$(ls torch*.whl)
+          dist_path=$(pwd)/${dist_name}
+          echo "dist-name=${dist_name}" >> $GITHUB_OUTPUT
+          echo "dist-path=${dist_path}" >> $GITHUB_OUTPUT
+
+      - name: Install torch
+        working-directory: pytorch/dist
+        run: |
+          pip install ${{ steps.list-dist.outputs.dist-name }}
+
+      - name: List torch version
+        id: list-version
+        run: |
+          torch_version=$(python -c "import torch; print(torch.__version__)")
+          echo "torch version: ${torch_version}"
+          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
+
+      - name: Upload distribution artifact
+        id: upload-dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.list-dist.outputs.dist-name }}
+          path: ${{ steps.list-dist.outputs.dist-path }}
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+      - name: Write to workflow job summary
+        if: ${{ steps.upload-dist.outputs.artifact-url }}
+        run: |
+          echo "## torch-${{ steps.list-version.outputs.torch-version }} built successfully! :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "You can download the distribution package [here](${{ steps.upload-dist.outputs.artifact-url }})." >> $GITHUB_STEP_SUMMARY
