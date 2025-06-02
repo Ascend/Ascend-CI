@@ -75,7 +75,8 @@ jobs:
       image: ${{ needs.prepare.outputs.image }}
       env:
         HF_ENDPOINT: https://hf-mirror.com
-
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        
     steps:
       - name: Show NPU info
         run: |
@@ -115,7 +116,8 @@ jobs:
       - name: Download Qwen2.5 model
         run: |
           tune download Qwen/Qwen2.5-0.5B-Instruct \
-            --output-dir /tmp/Qwen2.5-0.5B-Instruct 
+            --output-dir /tmp/Qwen2.5-0.5B-Instruct \
+            --hf-token os.environ["HF_TOKEN"]
 
       - name: Run torchtune with lora finetune
         run: |
