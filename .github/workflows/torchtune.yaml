@@ -118,7 +118,7 @@ jobs:
           export HF_ENDPOINT='https://hf-mirror.com'
           huggingface-cli download --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir /tmp/Qwen2.5-0.5B-Instruct \
-            --hf-token os.environ["HF_TOKEN"]
+            --token os.environ["HF_TOKEN"]
 
       - name: Run torchtune with lora finetune
         run: |
