@@ -1,4 +1,4 @@
-name: "_ascend_npu_torchtune"
+name: "torchtune single device test"
 
 on:
   workflow_dispatch:
@@ -37,7 +37,14 @@ on:
           default: '/dev/davinci0'
           description: 'Device to use'
 
+  pull_request:
+    branches: 
+      - 'torchtune'
+    paths:
+      - '.github/workflows/torchtune.yaml'
   push:
+    branches: 
+      - 'torchtune'
     paths:
       - '.github/workflows/torchtune.yaml'
 
