@@ -115,6 +115,7 @@ jobs:
 
       - name: Download Qwen2.5 model
         run: |
+          export HF_ENDPOINT='https://hf-mirror.com'
           tune download Qwen/Qwen2.5-0.5B-Instruct \
             --output-dir /tmp/Qwen2.5-0.5B-Instruct \
             --hf-token os.environ["HF_TOKEN"]
