@@ -73,8 +73,8 @@ jobs:
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
       image: ${{ needs.prepare.outputs.image }}
-      env:
-        HF_ENDPOINT: https://hf-mirror.com
+      # env:
+      #   HF_ENDPOINT: https://hf-mirror.com
         
     steps:
       - name: Show NPU info
@@ -116,7 +116,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          export HF_ENDPOINT=https://hf-mirror.com
+          # export HF_ENDPOINT=https://hf-mirror.com
           huggingface-cli download --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir /tmp/Qwen2.5-0.5B-Instruct \
             --token $HF_TOKEN
