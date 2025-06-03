@@ -69,6 +69,11 @@ jobs:
         with:
           repository: pytorch/torchtune
           path: torchtune
+     
+      - name: Install torchtune
+        working-directory: torchtune
+        run: |
+          pip install -e .
 
       - name: Download torch artifact
         if: ${{ inputs.torch-artifact }}
@@ -103,16 +108,15 @@ jobs:
         working-directory: ascend_npu
         run: |
           pip install ${{ inputs.torch-npu-artifact }}
-
-      - name: Install torchtune
-        working-directory: torchtune
-        run: |
-          pip install -e .
       
       - name: Download Qwen2.5 model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          export HF_ENDPOINT=https://hf-mirror.com
           tune download Qwen/Qwen2.5-0.5B-Instruct \
-            --output-dir /tmp/Qwen2.5-0.5B-Instruct 
+            --output-dir /tmp/Qwen2.5-0.5B-Instruct \
+            --hf-token $HF_TOKEN
 
       - name: Run torchtune with lora finetune
         run: |
