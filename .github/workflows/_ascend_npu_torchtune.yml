@@ -118,7 +118,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           export HF_ENDPOINT=https://hf-mirror.com
-          huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct \
+          huggingface-cli download --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir /tmp/Qwen2.5-0.5B-Instruct \
             --token $HF_TOKEN
 
