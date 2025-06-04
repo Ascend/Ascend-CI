@@ -189,3 +189,5 @@ jobs:
       device: ${{ needs.prepare.outputs.device }}
       torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
       torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}
+    secrets:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
