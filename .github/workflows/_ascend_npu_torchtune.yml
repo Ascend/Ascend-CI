@@ -117,6 +117,10 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          if HF_TOKEN="" || [ -z "$HF_TOKEN" ]; then
+            echo "HF_TOKEN is not set, skipping model download."
+            exit 0
+          fi
           export HF_ENDPOINT=https://hf-mirror.com
           huggingface-cli download --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir /tmp/Qwen2.5-0.5B-Instruct \
