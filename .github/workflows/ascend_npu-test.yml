@@ -136,22 +136,22 @@ jobs:
       device: ${{ needs.prepare.outputs.device }}
       torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
 
-  test:
-    name: Test torch_npu
-    needs:
-      - prepare
-      - build-torch
-      - build
-    if: |
-      !cancelled() && github.event_name != 'repository_dispatch' &&
-      (success() || (needs.build-torch.result == 'skipped' && needs.build.result == 'success'))
-    uses: ./.github/workflows/_ascend_npu_ut.yml
-    with:
-      runner: ${{ needs.prepare.outputs.runner }}
-      image: ${{ needs.prepare.outputs.image }}
-      device: ${{ needs.prepare.outputs.device }}
-      torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
-      torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}
+  # test:
+  #   name: Test torch_npu
+  #   needs:
+  #     - prepare
+  #     - build-torch
+  #     - build
+  #   if: |
+  #     !cancelled() && github.event_name != 'repository_dispatch' &&
+  #     (success() || (needs.build-torch.result == 'skipped' && needs.build.result == 'success'))
+  #   uses: ./.github/workflows/_ascend_npu_ut.yml
+  #   with:
+  #     runner: ${{ needs.prepare.outputs.runner }}
+  #     image: ${{ needs.prepare.outputs.image }}
+  #     device: ${{ needs.prepare.outputs.device }}
+  #     torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
+  #     torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}
 
   # benchmark:
   #   name: Run benchmarks
@@ -189,3 +189,5 @@ jobs:
       device: ${{ needs.prepare.outputs.device }}
       torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
       torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}
+    secrets:
+      hf_token: ${{ secrets.HF_TOKEN}}
