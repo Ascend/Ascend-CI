@@ -23,6 +23,10 @@ on:
         required: true
         type: string
         description: "The distribution artifact name of torch_npu"
+    secrets:
+      hf_token:
+        description: 'A token passed from the caller workflow'
+        required: true
 
 defaults:
   run:
@@ -115,12 +119,8 @@ jobs:
           
       - name: Download Qwen2.5 model
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_TOKEN: ${{ secrets.hf_token }}
         run: |
-          if HF_TOKEN="" || [ -z "$HF_TOKEN" ]; then
-            echo "HF_TOKEN is not set, skipping model download."
-            exit 0
-          fi
           export HF_ENDPOINT=https://hf-mirror.com
           huggingface-cli download --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir /tmp/Qwen2.5-0.5B-Instruct \
