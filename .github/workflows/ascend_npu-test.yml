@@ -190,4 +190,4 @@ jobs:
       torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
       torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}
     secrets:
-      hf_token: ${{ secrets.HF_TOKEN}}
+      hf_token: ${{ secrets.HF_TOKEN }}
