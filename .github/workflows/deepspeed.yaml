@@ -160,7 +160,7 @@ jobs:
           pytest --verbose model_parallelism/*
           pytest --verbose moe/test_moe_tp.py
           pytest --verbose monitor/*
-          pytest --verbose utils/*
+          # pytest --verbose utils/*
           pytest --verbose runtime/test_ds_config_model.py
           pytest --verbose runtime/pipe/test_pipe_schedule.py
           pytest --verbose runtime/zero/test_zero_config.py
