@@ -150,7 +150,8 @@ jobs:
         working-directory: deepspeed/tests/unit
         run: |
           unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
-
+          export TORCHINDUCTOR_DISABLE=1
+          
           pytest --verbose accelerator/*
           pytest --verbose autotuning/*
           pytest --verbose checkpoint/test_reshape_checkpoint.py
