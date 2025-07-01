@@ -27,12 +27,12 @@ on:
     branches: 
       - 'torchtune'
     paths:
-      - '.github/workflows/torchtune.yaml'
+      - '.github/workflows/torchtune.yml'
   push:
     branches: 
       - 'torchtune'
     paths:
-      - '.github/workflows/torchtune.yaml'
+      - '.github/workflows/torchtune.yml'
 
 defaults:
   run:
