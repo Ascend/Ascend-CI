@@ -85,7 +85,7 @@ jobs:
 
       - name: Install torch_npu
         run: |
-          pip install torch torch_npu==2.7.0rc1 torchvision torchao --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+          pip install torch torch_npu==2.7.1rc1 torchvision torchao --extra-index-url https://download.pytorch.org/whl/nightly/cpu
           
       - name: Install torchtune
         working-directory: torchtune
