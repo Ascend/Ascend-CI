@@ -83,7 +83,14 @@ jobs:
           git rev-parse --short HEAD
           pip install .
 
+      - name: Checkout deepspeed
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/DeepSpeed
+          path: deepspeed
+
       - name: Install deepspeed
+        working-directory: deepspeed
         run: |
           pip install .[dev,1bit,autotuning]
           ds_report
