@@ -41,6 +41,7 @@ jobs:
           echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
 
   unit-tests:
+    needs: prepare
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
       image: ascendai/cann:latest
