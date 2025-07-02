@@ -99,8 +99,8 @@ jobs:
       - name: Download Qwen2.5 model
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_ENDPOINT: "https://hf-mirror.com"
         run: |
-          export HF_ENDPOINT=https://hf-mirror.com
           huggingface-cli download --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir /tmp/Qwen2.5-0.5B-Instruct
 
