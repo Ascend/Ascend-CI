@@ -97,16 +97,20 @@ jobs:
           pip list
 
       - name: Download Qwen2.5 model
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_ENDPOINT: "https://hf-mirror.com"
-          HF_HUB_ENABLE_HF_TRANSFER: 1
-          TRANSFORMERS_CACHE: ${{ github.workspace }}/.hf_cache
-          HF_HOME: ${{ github.workspace }}/.hf_home
+        # env:
+        #   HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        #   HF_ENDPOINT: "https://hf-mirror.com"
+        #   HF_HUB_ENABLE_HF_TRANSFER: 1
+        #   TRANSFORMERS_CACHE: ${{ github.workspace }}/.hf_cache
+        #   HF_HOME: ${{ github.workspace }}/.hf_home
         run: |
-          rm -rf $TRANSFORMERS_CACHE/* || true
-          huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct \
-            --local-dir /tmp/Qwen2.5-0.5B-Instruct
+
+          tune download Qwen/Qwen2.5-0.5B-Instruct \
+            --output-dir /tmp/Qwen2.5-0.5B-Instruct 
+          # rm -rf $TRANSFORMERS_CACHE/* || true
+          # huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct \
+          #   --local-dir /tmp/Qwen2.5-0.5B-Instruct \
+          #   --hf-token ${{ secrets.HF_TOKEN }}
 
       - name: Run torchtune with lora finetune
         run: |
