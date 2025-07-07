@@ -83,24 +83,16 @@ jobs:
           repository: pytorch/torchtune
           path: torchtune
 
-      - name: Install torch_npu
-        run: |
-          pip install torch torch_npu==2.7.1rc1 torchvision torchao --extra-index-url https://download.pytorch.org/whl/nightly/cpu
-          
       - name: Install torchtune
         working-directory: torchtune
         run: |
           pip install torchtune
-            
-      - name: Show environment info
-        run: |
-          pip list
 
       - name: Download Qwen2.5 model
-        # env:
+        env:
         #   HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        #   HF_ENDPOINT: "https://hf-mirror.com"
-        #   HF_HUB_ENABLE_HF_TRANSFER: 1
+          HF_ENDPOINT: "https://hf-mirror.com"
+          HF_HUB_ENABLE_HF_TRANSFER: 1
         #   TRANSFORMERS_CACHE: ${{ github.workspace }}/.hf_cache
         #   HF_HOME: ${{ github.workspace }}/.hf_home
         run: |
@@ -111,6 +103,15 @@ jobs:
           # huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct \
           #   --local-dir /tmp/Qwen2.5-0.5B-Instruct \
           #   --hf-token ${{ secrets.HF_TOKEN }}
+
+      - name: Install torch_npu
+        run: |
+          pip install torch torch_npu==2.7.1rc1 torchvision torchao --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+                    
+      - name: Show environment info
+        run: |
+          pip list
+
 
       - name: Run torchtune with lora finetune
         run: |
