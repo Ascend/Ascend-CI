@@ -100,11 +100,11 @@ jobs:
       - name: Install pytorch
         run: |
           pip install \
-              torch==2.2.0 \
-              torch_npu==2.2.0 \
-              torchvision==0.17.0 \
-              torchaudio==2.2.0 \
-              numpy==1.26.4 \
+              torch \
+              torch_npu==2.7.1rc1 \
+              torchvision \
+              torchaudio \
+              numpy==1.* \
               cloudpickle \
               tornado \
               ml-dtypes
