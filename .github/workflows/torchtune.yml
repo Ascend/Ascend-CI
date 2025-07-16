@@ -96,7 +96,7 @@ jobs:
         env:
         #   HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_ENDPOINT: "https://hf-mirror.com"
-          HF_HUB_ENABLE_HF_TRANSFER: 1
+          # HF_HUB_ENABLE_HF_TRANSFER: 1
         #   TRANSFORMERS_CACHE: ${{ github.workspace }}/.hf_cache
         #   HF_HOME: ${{ github.workspace }}/.hf_home
         run: |
