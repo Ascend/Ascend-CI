@@ -1,4 +1,4 @@
- name: "_ascend_npu_torchtune"
+name: "_ascend_npu_torchtune"
 
 on:
   workflow_call:
