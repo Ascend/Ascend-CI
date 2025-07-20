@@ -123,7 +123,7 @@ jobs:
           HF_TOKEN: ${{ secrets.hf_token }}
         run: |
           export HF_ENDPOINT=https://hf-mirror.com
-          tune download --resume-download Qwen/Qwen2.5-0.5B-Instruct \
+          tune download Qwen/Qwen2.5-0.5B-Instruct \
             --output-dir /tmp/Qwen2.5-0.5B-Instruct \
             --hf-token $HF_TOKEN
 
