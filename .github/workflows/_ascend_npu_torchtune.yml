@@ -83,12 +83,7 @@ jobs:
       - name: Install torch
         if: ${{ inputs.torch-artifact }}
         run: |
-          pip install ${{ inputs.torch-artifact }} 
-
-      - name: Install torch_npu dependencies
-        if: ${{ !inputs.torch-artifact }}
-        run: |
-          pip install -r https://raw.githubusercontent.com/Ascend/pytorch/refs/heads/master/requirements.txt
+          pip install ${{ inputs.torch-artifact }}
 
       - name: List torch version
         id: list-torch-version
