@@ -81,13 +81,6 @@ jobs:
         run: |
           pip install ${{ inputs.torch-artifact }}
 
-      - name: List torch version
-        id: list-torch-version
-        shell: bash
-        run: |
-          torch_version=$(python -c "import torch; print(torch.__version__)")
-          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
-
       - name: Download torch_npu artifact
         uses: actions/download-artifact@v4
         with:
@@ -98,12 +91,6 @@ jobs:
         working-directory: ascend_npu
         run: |
           pip install ${{ inputs.torch-npu-artifact }} torchtune torchao torchvision --extra-index-url https://download.pytorch.org/whl/nightly/cpu
-
-      # - name: Install torchtune
-      #   if: ${{ !inputs.torch-artifact }}
-      #   working-directory: torchtune
-      #   run: |
-      #     pip install -e .
           
       - name: Show environment info
         run: |
