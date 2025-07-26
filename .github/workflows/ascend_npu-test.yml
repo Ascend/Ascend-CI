@@ -166,7 +166,6 @@ jobs:
     with:
       runner: ${{ needs.prepare.outputs.runner }}
       image: ${{ needs.prepare.outputs.image }}
-      device: ${{ needs.prepare.outputs.device }}
       torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
       torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}
     secrets:
@@ -185,7 +184,6 @@ jobs:
     with:
       runner: ${{ needs.prepare.outputs.runner }}
       image: ${{ needs.prepare.outputs.image }}
-      device: ${{ needs.prepare.outputs.device }}
       torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
       torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}
     secrets:
