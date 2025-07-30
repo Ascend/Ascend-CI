@@ -47,7 +47,6 @@ build_and_upload() {
 
 echo "================ Cron job started at $(date) ================"
 
-# 切换到脚本所在目录执行
 REPO="microsoft/onnxruntime"
 API="https://api.github.com/repos/$REPO/tags"
 REPO_URL="https://github.com/$REPO.git"
@@ -57,11 +56,11 @@ WAIT_SECONDS=60
 
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 获取最新 tag
+# acquire new tag
 LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | grep '"name":' | head -n 1 | cut -d '"' -f 4)
 
 LAST_TAG=""
-# 获取之前已上传的 tag
+# acquire before tag
 if [ -s "$STATE_FILE" ]; then
     LAST_TAG=$(cat "$STATE_FILE")
 fi

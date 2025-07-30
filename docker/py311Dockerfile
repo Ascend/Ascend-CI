@@ -1,0 +1,51 @@
+ARG ARCH="aarch64"
+FROM quay.io/pypa/manylinux_2_28_${ARCH}:latest
+
+# ARG Definition
+ARG ARCH
+RUN dnf install -y vim wget openssl-devel make libffi-devel bzip2-devel zlib-devel readline-devel sqlite-devel
+
+# Python
+WORKDIR /opt
+RUN wget https://www.python.org/ftp/python/3.11.4/Python-3.11.4.tgz && \
+    tar -xzf Python-3.11.4.tgz && \
+    cd Python-3.11.4 && \
+    ./configure --prefix=/opt/python3.11.4 --enable-optimizations && \
+    make -j$(nproc) && \
+    make install && \
+    cd /opt && \
+    rm -rf Python-3.11.4 Python-3.11.4.tgz && \
+    ln -sf /opt/python3.11.4/bin/python3.11 /usr/local/bin/python3 && \
+    ln -sf /opt/python3.11.4/bin/python3.11 /usr/local/bin/python && \
+    ln -sf /opt/python3.11.4/bin/pip3 /usr/local/bin/pip3 && \
+    ln -sf /opt/python3.11.4/bin/pip3 /usr/local/bin/pip && \
+    pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    twine \
+    packaging \
+    wheel \
+    numpy==1.24.0 \
+    decorator \
+    attrs \
+    flatbuffers \
+    protobuf==3.20
+
+RUN cd /opt && \
+    wget https://cmake.org/files/v3.29/cmake-3.29.7.tar.gz && \
+    mkdir cmake && \
+    tar -zxvf cmake-3.29.7.tar.gz -C /opt/cmake --strip-components=1 && \
+    cd cmake && \
+    ./bootstrap && \
+    make -j$(nproc) && \
+    make install
+
+ENV PATH="/opt/cmake/bin:${PATH}"
+
+WORKDIR /root
+
+RUN wget https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.2.RC1/Ascend-cann-toolkit_8.2.RC1_linux-${ARCH}.run && \
+    chmod +x ./Ascend-cann-toolkit_8.2.RC1_linux-${ARCH}.run && \
+    ./Ascend-cann-toolkit_8.2.RC1_linux-${ARCH}.run --full -q && \
+    rm ./Ascend-cann-toolkit_8.2.RC1_linux-${ARCH}.run
+
+RUN echo 'source /usr/local/Ascend/ascend-toolkit/set_env.sh' >> /root/.bashrc && \
+    echo "alias ll='ls -l --color=auto'" >> ~/.bashrc
