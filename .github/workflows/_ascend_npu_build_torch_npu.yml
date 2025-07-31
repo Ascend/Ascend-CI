@@ -11,10 +11,6 @@ on:
         required: true
         type: string
         description: "The docker image which will be used to build"
-      device:
-        required: true
-        type: string
-        description: "The device selected to run on"
       torch-artifact:
         required: false
         type: string
