@@ -11,10 +11,6 @@ on:
         required: true
         type: string
         description: "The docker image which will be loaded"
-      device:
-        required: true
-        type: string
-        description: "The device selected to run on"
       torch-artifact:
         required: false
         type: string
@@ -23,6 +19,10 @@ on:
         required: true
         type: string
         description: "The distribution artifact name of torch_npu"
+    secrets:
+      hf_token:
+        description: 'A token passed from the caller workflow'
+        required: true
 
 defaults:
   run:
@@ -81,18 +81,6 @@ jobs:
         run: |
           pip install ${{ inputs.torch-artifact }}
 
-      - name: Install torch_npu dependencies
-        if: ${{ !inputs.torch-artifact }}
-        run: |
-          pip install -r https://raw.githubusercontent.com/Ascend/pytorch/refs/heads/master/requirements.txt
-
-      - name: List torch version
-        id: list-torch-version
-        shell: bash
-        run: |
-          torch_version=$(python -c "import torch; print(torch.__version__)")
-          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
-
       - name: Download torch_npu artifact
         uses: actions/download-artifact@v4
         with:
@@ -102,26 +90,25 @@ jobs:
       - name: Install torch_npu
         working-directory: ascend_npu
         run: |
-          pip install ${{ inputs.torch-npu-artifact }}
+          pip install ${{ inputs.torch-npu-artifact }} torchtune torchao torchvision --extra-index-url https://download.pytorch.org/whl/nightly/cpu
 
-      - name: Install torchtune
-        working-directory: torchtune
+      - name: Show environment info
         run: |
-          # pip install -e .
-          pip install torch torchao torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
-          pip install torchtune
-      
+          pip list
+
       - name: Download Qwen2.5 model
+        env:
+          HF_TOKEN: ${{ secrets.hf_token }}
         run: |
+          export HF_ENDPOINT=https://hf-mirror.com
           tune download Qwen/Qwen2.5-0.5B-Instruct \
-            --output-dir /tmp/Qwen2.5-0.5B-Instruct 
+            --output-dir /tmp/Qwen2.5-0.5B-Instruct \
+            --hf-token $HF_TOKEN
 
       - name: Run torchtune with lora finetune
         run: |
           tune run lora_finetune_single_device --config qwen2_5/0.5B_lora_single_device || true
-      
+
       - name: Run torchtune with full finetune
         run: |
           tune run full_finetune_single_device --config qwen2_5/0.5B_full_single_device || true
-
-      
