@@ -1,0 +1,218 @@
+name: "_ascend_npu_benchmark"
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: true
+        type: string
+        description: "The runner selected to run on"
+      image:
+        required: true
+        type: string
+        description: "The docker image which will be loaded"
+      torch-artifact:
+        required: false
+        type: string
+        description: "The distribution artifact name of torch"
+      torch-npu-artifact:
+        required: true
+        type: string
+        description: "The distribution artifact name of torch_npu"
+    # secrets:
+    #   pr-token:
+    #     description: "A token used to create a pull request"
+    #     required: true
+
+jobs:
+  benchmark:
+    name: run benchmarks for torch_npu
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.image }}
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
+    outputs:
+      changed: ${{ steps.update-readme.outputs.changed }}
+      report-url: ${{ steps.upload-report.outputs.artifact-url }}
+    steps:
+      - name: Show NPU info
+        run: |
+          npu-smi info
+
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+              git gcc g++ make cmake ninja-build curl \
+              libgl1 libglib2.0-0 libsndfile1
+
+      # See: https://github.com/actions/checkout/issues/363#issuecomment-1915075699
+      # See: https://github.com/hunshcn/gh-proxy/issues/28#issuecomment-773769630
+      - name: Config git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout benchmark
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/benchmark
+          path: benchmark
+
+      # TODO
+      - name: Install torch
+        id: install-torch
+        uses: ./.github/actions/install-artifact
+        with:
+          artifact: ${{ inputs.torch-artifact }}
+
+      - name: Download torch artifact
+        if: ${{ inputs.torch-artifact }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.torch-artifact }}
+
+      - name: Install torch
+        if: ${{ inputs.torch-artifact }}
+        run: |
+          pip install ${{ inputs.torch-artifact }}
+
+      - name: Install torch_npu dependencies
+        if: ${{ !inputs.torch-artifact }}
+        run: |
+          pip install -r https://raw.githubusercontent.com/Ascend/pytorch/refs/heads/master/requirements.txt
+
+      - name: Download torch_npu artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.torch-npu-artifact }}
+          path: ascend_npu
+
+      - name: Install torch_npu
+        working-directory: ascend_npu
+        run: |
+          pip install ${{ inputs.torch-npu-artifact }}
+
+      - name: List torch version
+        id: list-torch-version
+        shell: bash
+        run: |
+          torch_version=$(python -c "import torch; print(torch.__version__.split('+')[0])")
+          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
+
+      - name: Install benchmark dependencies
+        run: |
+          pip install -r benchmark/requirements.txt \
+              torch==${{ steps.list-torch-version.outputs.torch-version }} \
+              numpy==1.*
+
+      - name: Install dependencies for all the models
+        run: |
+          python benchmark/install.py --userbenchmark test_bench --continue_on_fail
+
+      - name: Install nightly torchvision and torchaudio
+        run: |
+          pip install --pre torchvision torchaudio --no-deps --index-url https://download.pytorch.org/whl/nightly/cpu
+
+      - name: Install project dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Show environment info
+        run: |
+          npu_is_available=$(python -c "import torch; print(torch.npu.is_available())")
+          npu_count=$(python -c "import torch; print(torch.npu.device_count())")
+          echo "NPU is available: ${npu_is_available}"
+          echo "NPU count: ${npu_count}"
+          pip list | grep -E 'torch|numpy'
+
+      - name: Run benchmarks
+        working-directory: benchmark
+        run: |
+          python run_benchmark.py test_bench --accuracy --device npu --test eval \
+              --output ascend_npu_benchmark.json
+
+      - name: Upload the benchmark report file
+        id: upload-report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ascend_npu_benchmark.json
+          path: benchmark/ascend_npu_benchmark.json
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+      - name: Write to workflow job summary
+        run: |
+          python .ci/benchmark.py --write-gh-job-summary --path benchmark/ascend_npu_benchmark.json
+
+      - name: Update README.md
+        if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) }}
+        id: update-readme
+        run: |
+          python .ci/benchmark.py --update-readme --path benchmark/ascend_npu_benchmark.json
+          if git diff --quiet README.md; then
+            echo "README.md not changed"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "README.md changed"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload README.md
+        if: ${{ steps.update-readme.outputs.changed == 'true' }}
+        id: upload-readme
+        uses: actions/upload-artifact@v4
+        with:
+          name: README.md
+          path: README.md
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+  # create-pr:
+  #   if: ${{ needs.benchmark.outputs.changed == 'true' }}
+  #   name: Update benchmark result
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - benchmark
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+
+  #     - name: Download README.md
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: README.md
+
+  #     # See: https://github.com/peter-evans/create-pull-request
+  #     - name: Create a pull request to update benchmark result
+  #       uses: peter-evans/create-pull-request@v7
+  #       with:
+  #         token: ${{ secrets.pr-token }}
+  #         base: ${{ github.head_ref }}
+  #         commit-message: "Update torchbenchmark report in README.md"
+  #         add-paths: README.md
+  #         branch: ascend-npu/benchmark
+  #         title: "[Ascend NPU] Update torchbenchmark report in README.md"
+  #         body: |
+  #           The torchbenchmark results running on Ascend NPU have changed, I'm updating the report in README.md.
+
+  #           Please check out the following resources for more information:
+
+  #           - [Workflow run][1]
+  #           - [Torchbenchmark report][2] (click to download)
+
+  #           [1]: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  #           [2]: ${{ needs.benchmark.outputs.report-url }}
+
+  #           cc: @FFFrog @zeshengzong 
+  #         reviewers: zeshengzong
