@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build for ${{ matrix.arch }}
+    name: Build for ${{ matrix.build_name }}
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.image }}
@@ -23,18 +23,22 @@ jobs:
           - arch: x86_64
             runner: ONNXRuntime
             image: bachelor233/manylinux2_28-py310-cann8_1_x86_64
+            build_name: x86_64-py310-cann8.1
 
           - arch: aarch
             runner: pypi-aarch
             image: bachelor233/manylinux2_28-py310-cann8_1_aarch
+            build_name: aarch64-py310-cann8.1
 
           - arch: x86_64
             runner: ONNXRuntime
             image: bachelor233/manylinux2_28-py311-cann8.2.rc1-x86_64
+            build_name: x86_64-py311-cann8.2rc1
 
           - arch: aarch
             runner: pypi-aarch
             image: bachelor233/manylinux2_28-py311-cann8.2.rc1-aarch64
+            build_name: aarch64-py311-cann8.2rc1
 
     steps:
       - name: Clone ASCEND-CI project
