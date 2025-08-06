@@ -131,17 +131,17 @@ jobs:
     #     run: |
     #       pip install ${{ inputs.torch-npu-artifact }}
 
-      - name: List torch version
-        id: list-torch-version
-        shell: bash
-        run: |
-          torch_version=$(python -c "import torch; print(torch.__version__.split('+')[0])")
-          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
+    #   - name: List torch version
+    #     id: list-torch-version
+    #     shell: bash
+    #     run: |
+    #       torch_version=$(python -c "import torch; print(torch.__version__.split('+')[0])")
+    #       echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
 
       - name: Install benchmark dependencies
         run: |
           pip install -r benchmark/requirements.txt \
-              torch==${{ steps.list-torch-version.outputs.torch-version }} \
+              torch==2.7.1 \
               numpy==1.*
 
       - name: Install dependencies for all the models
