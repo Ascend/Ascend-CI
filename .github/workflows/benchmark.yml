@@ -1,35 +1,60 @@
 name: "_ascend_npu_benchmark"
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       runner:
         required: true
-        type: string
+        type: choice
+        options:
+          - npu-arm64
+          - linux-arm64-npu-0
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: "linux-arm64-npu-1"
         description: "The runner selected to run on"
       image:
         required: true
-        type: string
+        type: choice
+        options:
+          - ascendai/cann:7.0.1-910b-ubuntu22.04-py3.8
+          - ascendai/cann:8.0.0-910b-ubuntu22.04-py3.10
+          - ascendai/cann:latest
+        default: "ascendai/cann:latest"
         description: "The docker image which will be loaded"
-      torch-artifact:
-        required: false
-        type: string
-        description: "The distribution artifact name of torch"
-      torch-npu-artifact:
-        required: true
-        type: string
-        description: "The distribution artifact name of torch_npu"
-    # secrets:
-    #   pr-token:
-    #     description: "A token used to create a pull request"
-    #     required: true
+    
+  pull_request:
+    branches:
+      - "benchmark"
+    paths:
+      - ".github/workflows/benchmark.yml"
+  push:
+    branches:
+      - "benchmark"
+    paths:
+      - ".github/workflows/benchmark.yml"
 
 jobs:
+
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ inputs.runner }}
+      image: ${{ inputs.image }}
+    steps:
+      - name: Set outputs
+        id: set
+        run: |
+          echo "runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
+          echo "image=${{ inputs.image  || 'ascendai/cann:latest' }}" >> $GITHUB_OUTPUT
+
   benchmark:
     name: run benchmarks for torch_npu
-    runs-on: ${{ inputs.runner }}
+    needs: prepare
+    runs-on: ${{ needs.prepare.outputs.runner }}
     container:
-      image: ${{ inputs.image }}
+      image: ${{ needs.prepare.outputs.image }}
       env:
         HF_ENDPOINT: https://hf-mirror.com
     outputs:
@@ -68,38 +93,42 @@ jobs:
           path: benchmark
 
       # TODO
-      # - name: Install torch
-      #   id: install-torch
-      #   uses: ./.github/actions/install-artifact
-      #   with:
-      #     artifact: ${{ inputs.torch-artifact }}
+    #   - name: Install torch
+    #     id: install-torch
+    #     uses: ./.github/actions/install-artifact
+    #     with:
+    #       artifact: ${{ inputs.torch-artifact }}
 
-      - name: Download torch artifact
-        if: ${{ inputs.torch-artifact }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.torch-artifact }}
+    #   - name: Download torch artifact
+    #     if: ${{ inputs.torch-artifact }}
+    #     uses: actions/download-artifact@v4
+    #     with:
+    #       name: ${{ inputs.torch-artifact }}
+
+    #   - name: Install torch
+    #     if: ${{ inputs.torch-artifact }}
+    #     run: |
+    #       pip install ${{ inputs.torch-artifact }}
 
       - name: Install torch
-        if: ${{ inputs.torch-artifact }}
         run: |
-          pip install ${{ inputs.torch-artifact }}
+            pip install torch==2.7.0 torch_npu --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install torch_npu dependencies
-        if: ${{ !inputs.torch-artifact }}
+        # if: ${{ !inputs.torch-artifact }}
         run: |
           pip install -r https://raw.githubusercontent.com/Ascend/pytorch/refs/heads/master/requirements.txt
 
-      - name: Download torch_npu artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.torch-npu-artifact }}
-          path: ascend_npu
+    #   - name: Download torch_npu artifact
+    #     uses: actions/download-artifact@v4
+    #     with:
+    #       name: ${{ inputs.torch-npu-artifact }}
+    #       path: ascend_npu
 
-      - name: Install torch_npu
-        working-directory: ascend_npu
-        run: |
-          pip install ${{ inputs.torch-npu-artifact }}
+    #   - name: Install torch_npu
+    #     working-directory: ascend_npu
+    #     run: |
+    #       pip install ${{ inputs.torch-npu-artifact }}
 
       - name: List torch version
         id: list-torch-version
