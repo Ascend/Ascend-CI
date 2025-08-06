@@ -1,4 +1,4 @@
-name: "_ascend_npu_benchmark"
+name: "benchmark"
 
 on:
   workflow_dispatch:
@@ -40,8 +40,8 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      runner: ${{ inputs.runner }}
-      image: ${{ inputs.image }}
+      runner: ${{ steps.set.outputs.runner }}
+      image: ${{ steps.set.outputs.image }}
     steps:
       - name: Set outputs
         id: set
