@@ -76,7 +76,7 @@ jobs:
           apt-get install -y \
               git gcc g++ make cmake ninja-build curl \
               libgl1 libglib2.0-0 libsndfile1 \
-              python-is-python3 python3-pip 
+              python-is-python3 python3-pip
 
       # See: https://github.com/actions/checkout/issues/363#issuecomment-1915075699
       # See: https://github.com/hunshcn/gh-proxy/issues/28#issuecomment-773769630
