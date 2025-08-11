@@ -62,7 +62,7 @@ jobs:
           repository: Ascend/pytorch
           submodules: recursive
           path: torch_npu
-          ref: e11df4e2a1400a21ee98b2eca08a8e299955db4a
+          ref: 695e649bd5baa7a156fa86b38409ffd11b04f96e
 
       - name: Install torch_npu dependencies
         working-directory: torch_npu
