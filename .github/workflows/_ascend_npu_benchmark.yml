@@ -105,7 +105,7 @@ jobs:
         id: list-torch-version
         shell: bash
         run: |
-          torch_version=$(python -c "import torch; print(torch.__version__.split('+')[0])")
+          torch_version=$(python -c "import torch; print(torch.__version__)")
           echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
 
       - name: Install benchmark dependencies
