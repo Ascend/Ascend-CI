@@ -34,21 +34,36 @@ def classify_log(text: str) -> str:
     return "unknown"
 
 
+STATUS_SYMBOLS = {
+    "supported": "✅ ",
+    "partial": "🟡",
+    "fail": "❌",
+    "unsupported": "❓",
+    "unknown": "🔍",
+}
+
+
 def format_markdown(classification: Dict[str, List[str]]) -> str:
-    order = ["fail", "partial", "unsupported", "supported", "unknown"]
     lines = [
         "### Backend Operator Support Summary",
         "",
-        "| Status | Operators |",
+        "| Operator | Status |",
         "| --- | --- |",
     ]
-    for status in order:
-        ops = classification.get(status, [])
-        if not ops:
+
+    ordered_statuses = ["supported", "partial", "fail", "unsupported", "unknown"]
+    for status in ordered_statuses:
+        operators = classification.get(status, [])
+        if not operators:
             continue
-        lines.append(f"| {status.capitalize()} | {', '.join(sorted(ops))} |")
+        symbol = STATUS_SYMBOLS.get(status, "?")
+        for op in sorted(operators):
+            lines.append(f"| {op} | {symbol} |")
+
     if len(lines) == 4:  # no rows added
         lines.append("| None | - |")
+
+    lines.append("\nTips: ✅ supported, 🟡 partially supported, ❌ fail, ❓ unsupported, 🔍 unknown")
     return "\n".join(lines)
 
 
