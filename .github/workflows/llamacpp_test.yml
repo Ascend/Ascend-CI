@@ -29,6 +29,9 @@ on:
   schedule:
     - cron: '0 12 * * *'
 
+permissions:
+  contents: write
+  pull-requests: write
       
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -337,7 +340,7 @@ jobs:
           with:
             token: ${{ secrets.GITHUB_TOKEN }}
             base: ${{ github.ref_name != '' && github.ref_name || 'main' }}
-            branch: llamacpp-report/${{ github.run_id }}
+            branch: llamacpp-report/auto-update
             commit-message: "Update llamacpp backend ops support report"
             add-paths: docs/llamacpp_ops.md
             title: "[Ascend NPU] Update llamacpp backend ops support report"
@@ -350,6 +353,6 @@ jobs:
   
               [1]: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
               [2]: ${{ needs.test.outputs.upload-report }}
-  
+ 
               cc: @hipudding @noemotiovon @xuedinge233
             reviewers: xuedinge233
