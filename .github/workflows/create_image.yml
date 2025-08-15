@@ -1,0 +1,30 @@
+name: create_image
+
+on:
+  push:
+    branches:
+      - llamacpp
+    paths:
+      - '.github/workflows/create_image.yml'
+      - 'requirements/**'
+      - 'docker/llamacpp-310p.Dockerfile'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and push llama.cpp image
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: build image
+        run: |
+            IMAGE_NAME=llamacpp-310p:latest
+            docker build -t $IMAGE_NAME -f docker/llamacpp-310p.Dockerfile .
+            echo $IMAGE_NAME > image_name.txt
+            
+
