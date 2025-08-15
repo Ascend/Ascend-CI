@@ -59,7 +59,7 @@ jobs:
           - 'ascend910b3'
         build:
           - 'Release'
-    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    runs-on: ${{ needs.prepare.outputs.runner }}
     container:
       image: ${{ needs.prepare.outputs.image }}
       env:
