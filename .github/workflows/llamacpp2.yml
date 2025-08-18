@@ -127,8 +127,11 @@ jobs:
     
       - name: Download model
         run: |
+          pip install huggingface_hub
           mkdir -p llama.cpp/models/Qwen2.5-0.5B
-          wget -q https://hf-mirror.com/datasets/Ascend/Qwen2.5-0.5B/ggml-model-q4_0.bin -O llama.cpp/models/Qwen2.5-0.5B/ggml-model-q4_0.bin
+          huggingface_cli download \
+            --resume-download Qwen/Qwen2.5-0.5B-Instruct \
+            --local-dir llama.cpp/models/Qwen2.5-0.5B-Instruct
 
       - name: Accuracy test
         working-directory: llama.cpp/build
