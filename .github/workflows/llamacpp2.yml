@@ -128,7 +128,7 @@ jobs:
       - name: Download model
         run: |
           pip install huggingface_hub
-          mkdir -p llama.cpp/models/Qwen2.5-0.5B
+          mkdir -p llama.cpp/models/Qwen2.5-0.5B-Instruct
           huggingface_cli download \
             --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir llama.cpp/models/Qwen2.5-0.5B-Instruct
