@@ -1,46 +1,20 @@
-name: Build and publish to PyPI
-
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 11 * * 0'
-
 jobs:
   check:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
-      last_tag: ${{ steps.get_tag.outputs.last_tag }}
-      latest_tag: ${{ steps.get_latest_tag.outputs.latest_tag }}
-      # PYPI
-      # last_tag: ${{ steps.get_tag.outputs.last_tag }}
-
+      latest_tag: ${{ steps.get_tag.outputs.latest_tag }}
     steps:
-      - id: get_latest_tag
-        run: |
-          REPO="microsoft/onnxruntime"
-          API="https://api.github.com/repos/$REPO/tags"
-
-          LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | \
-                      grep '"name":' | head -n 1 | cut -d '"' -f 4)
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-
       - id: get_tag
         run: |
-          last=$(cat /home/last_tag.txt)
-          echo "last_tag=$last" >> $GITHUB_OUTPUT
-
-      # PYPI
-      # - id: get_tag
-      #   run: |
-      #     last_tag=$(python3 - <<'EOF'
-      # import urllib.request, json
-      # url = "https://pypi.org/pypi/onnxruntime-cann/json"
-      # with urllib.request.urlopen(url) as resp:
-      #     data = json.load(resp)
-      # print("v" + data["info"]["version"])
-      # EOF
-      # )
-      #     echo "latest_tag=$latest" >> $GITHUB_OUTPUT
+          latest=$(python3 - <<'EOF'
+import urllib.request, json
+url = "https://pypi.org/pypi/onnxruntime-cann/json"
+with urllib.request.urlopen(url) as resp:
+    data = json.load(resp)
+print(data["info"]["version"])
+EOF
+)
+          echo "latest_tag=$latest" >> $GITHUB_OUTPUT
 
   build:
     needs: check
@@ -52,7 +26,7 @@ jobs:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       volumes:
         - ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI
-
+        - /home/last_tag.txt:/root/last_tag.txt:ro   # 只读挂载，防止写入
     strategy:
       matrix:
         include:
@@ -60,22 +34,18 @@ jobs:
             runner: ONNXRuntime
             image: bachelor233/manylinux2_28-py310-cann8_1_x86_64
             build_name: x86_64-py310-cann8.1
-
           - arch: aarch
             runner: pypi-aarch
             image: bachelor233/manylinux2_28-py310-cann8_1_aarch
             build_name: aarch64-py310-cann8.1
-
           - arch: x86_64
             runner: ONNXRuntime
             image: bachelor233/manylinux2_28-py311-cann8.2.rc1-x86_64
             build_name: x86_64-py311-cann8.2rc1
-
           - arch: aarch
             runner: pypi-aarch
             image: bachelor233/manylinux2_28-py311-cann8.2.rc1-aarch64
             build_name: aarch64-py311-cann8.2rc1
-
     steps:
       - name: Clone ASCEND-CI project
         uses: actions/checkout@v4
@@ -87,13 +57,11 @@ jobs:
         working-directory: /root/Ascend-CI
         run: |
           chmod +x ./script/pypiPkg.sh
-          ./script/pypiPkg.sh \
-            ${{ needs.check.outputs.last_tag }} \
-            ${{ needs.check.outputs.latest_tag }}
+          ./script/pypiPkg.sh ${{ needs.check.outputs.latest_tag }}
 
   update:
-    needs: [build, check]
-    runs-on: self-hosted
+    needs: [build]
+    runs-on: ubuntu-latest
     steps:
       - name: Update last_tag
         run: |
