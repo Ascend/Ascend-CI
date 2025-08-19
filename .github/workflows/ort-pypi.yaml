@@ -11,8 +11,6 @@ jobs:
     outputs:
       last_tag: ${{ steps.get_tag.outputs.last_tag }}
       latest_tag: ${{ steps.get_latest_tag.outputs.latest_tag }}
-      # PYPI
-      # last_tag: ${{ steps.get_tag.outputs.last_tag }}
 
     steps:
       - id: get_latest_tag
