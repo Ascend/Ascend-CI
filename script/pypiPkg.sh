@@ -53,7 +53,7 @@ build_and_upload() {
              --skip_tests
 
     echo "开始上传到 PyPI (onnxruntime-cann)..."
-    python3 -m twine upload --non-interactive --skip-existing--repository onnxruntime-cann build/Linux/Release/dist/*.whl
+    python3 -m twine upload --non-interactive --skip-existing --repository onnxruntime-cann build/Linux/Release/dist/*.whl
 }
 
 echo "================ Cron job started at $(date) ================"
