@@ -10,10 +10,7 @@ username = __token__
 password = $PYPI_TOKEN
 EOF
 
-LAST_TAG=$1
-echo "Old tag (from file): $LAST_TAG"
-# acquire new tag
-LATEST_TAG=$2
+LATEST_TAG=$1
 echo "New tag (from github): $LATEST_TAG"
 
 REPO="microsoft/onnxruntime"
@@ -24,7 +21,6 @@ WAIT_SECONDS=60
 build_and_upload() {
   local TAG="$1"
   local CLONE_SUCCESS=0
-  rm -rf onnxruntime
 
   for i in $(seq 1 "$MAX_RETRIES"); do
     echo " 第 $i 次尝试 clone..."
@@ -60,9 +56,4 @@ echo "================ Cron job started at $(date) ================"
 
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-if [ "$LATEST_TAG" != "$LAST_TAG" ]; then
-    echo "Detected new tag: $LATEST_TAG"
-    build_and_upload "$LATEST_TAG"
-else
-    echo "No new tag. Latest is still: $LATEST_TAG"
-fi
+build_and_upload "$LATEST_TAG"

@@ -11,8 +11,22 @@ jobs:
     outputs:
       last_tag: ${{ steps.get_tag.outputs.last_tag }}
       latest_tag: ${{ steps.get_latest_tag.outputs.latest_tag }}
+      skip_build: ${{ steps.compare_tags.outputs.skip_build }}
 
     steps:
+      - id: get_tag
+        run: |
+          pypi_tag=$(python3 - <<'EOF'
+          import urllib.request, json
+          url = "https://pypi.org/pypi/onnxruntime-cann/json"
+          with urllib.request.urlopen(url) as resp:
+              data = json.load(resp)
+          print("v" + data["info"]["version"])
+          EOF
+          )
+
+          echo "last_tag=$pypi_tag" >> $GITHUB_OUTPUT
+
       - id: get_latest_tag
         run: |
           REPO="microsoft/onnxruntime"
@@ -22,26 +36,25 @@ jobs:
                       grep '"name":' | head -n 1 | cut -d '"' -f 4)
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
 
-      - id: get_tag
+      - id: compare_tags
         run: |
-          last=$(cat /home/last_tag.txt)
-          echo "last_tag=$last" >> $GITHUB_OUTPUT
+          GITHUB_TAG=${{ steps.get_latest_tag.outputs.latest_tag }}
+          PYPI_TAG=${{ steps.get_tag.outputs.last_tag }}
 
-      # PYPI
-      # - id: get_tag
-      #   run: |
-      #     last_tag=$(python3 - <<'EOF'
-      # import urllib.request, json
-      # url = "https://pypi.org/pypi/onnxruntime-cann/json"
-      # with urllib.request.urlopen(url) as resp:
-      #     data = json.load(resp)
-      # print("v" + data["info"]["version"])
-      # EOF
-      # )
-      #     echo "latest_tag=$latest" >> $GITHUB_OUTPUT
+          echo "GitHub latest: $GITHUB_TAG"
+          echo "PyPI latest: $PYPI_TAG"
+
+          if [ "$GITHUB_TAG" = "$PYPI_TAG" ]; then
+            echo "No new tag detected. Skipping build."
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "New tag detected: $GITHUB_TAG"
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+          fi
 
   build:
     needs: check
+    if: needs.check.outputs.skip_build == 'false'
     name: Build for ${{ matrix.build_name }}
     runs-on: ${{ matrix.runner }}
     container:
@@ -86,13 +99,4 @@ jobs:
         run: |
           chmod +x ./script/pypiPkg.sh
           ./script/pypiPkg.sh \
-            ${{ needs.check.outputs.last_tag }} \
             ${{ needs.check.outputs.latest_tag }}
-
-  update:
-    needs: [build, check]
-    runs-on: self-hosted
-    steps:
-      - name: Update last_tag
-        run: |
-          echo "${{ needs.check.outputs.latest_tag }}" > /home/last_tag.txt
