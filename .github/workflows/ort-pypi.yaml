@@ -26,7 +26,6 @@ jobs:
 
       - id: get_tag
         run: |
-          whoami
           last=$(cat /home/last_tag.txt)
           echo "last_tag=$last" >> $GITHUB_OUTPUT
 
