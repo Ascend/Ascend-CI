@@ -12,7 +12,7 @@ on:
           - linux-arm64-npu-4
           - linux-aarch64-310p-1
           - linux-aarch64-310p-2
-        default: "linux-arm64-npu-1"
+        default: "linux-aarch64-310p-1"
         description: "The runner selected to run on"
     #   image:
     #     required: true
