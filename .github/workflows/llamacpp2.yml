@@ -7,22 +7,24 @@ on:
         required: true
         type: choice
         options:
-          - npu-arm64
-          - linux-arm64-npu-0
           - linux-arm64-npu-1
           - linux-arm64-npu-2
           - linux-arm64-npu-4
+          - linux-aarch64-310p-1
+          - linux-aarch64-310p-2
         default: "linux-arm64-npu-1"
         description: "The runner selected to run on"
-      image:
-        required: true
-        type: choice
-        options:
-          - ascendai/cann:7.0.1-910b-ubuntu22.04-py3.8
-          - ascendai/cann:8.0.0-910b-ubuntu22.04-py3.10
-          - ascendai/cann:latest
-        default: "ascendai/cann:latest"
-        description: "The docker image which will be loaded"
+    #   image:
+    #     required: true
+    #     type: choice
+    #     options:
+    #         - ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
+    #         - ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11
+    #         - ascendai/cann:latest
+    #         - ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11
+    #         - ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11
+    #     default: "ascendai/cann:latest"
+    #     description: "The docker image which will be loaded"
     
   pull_request:
     branches:
@@ -36,7 +38,6 @@ on:
       - ".github/workflows/llamacpp2.yml"
 
 jobs:
-
   prepare:
     runs-on: ubuntu-latest
     outputs:
@@ -47,9 +48,13 @@ jobs:
         id: set
         run: |
           echo "runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
-          echo "image=${{ inputs.image  || 'ascendai/cann:latest' }}" >> $GITHUB_OUTPUT
+          if [[ "${{ inputs.runner }}" == "linux-arm64-npu-1" || "${{ inputs.runner }}" == "linux-arm64-npu-2" || "${{ inputs.runner }}" == "linux-arm64-npu-4" ]]; then
+            echo "image=ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11" >> $GITHUB_OUTPUT
+          else
+            echo "image=ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11" >> $GITHUB_OUTPUT
+          fi
 
-  benchmark:
+  test:
     name: Build llama.cpp on OpenEuler for Arm64
     needs: prepare
     strategy:
@@ -123,7 +128,7 @@ jobs:
       - name: test backend ops
         working-directory: llama.cpp/build
         run: |
-          ./test-backend-ops
+          ./bin/test-backend-ops test -o MUL_MAT
     
       - name: Download model
         run: |
@@ -133,15 +138,25 @@ jobs:
             --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir llama.cpp/models/Qwen2.5-0.5B-Instruct
 
-      - name: Accuracy test
-        working-directory: llama.cpp/build
-        run: |
-          ./test-accuracy --model ../models/7B/ggml-model-q4_0.bin --backend cann --soc-type ${{ matrix.device }} --threads 1
+    #   - name: Accuracy test
+    #     working-directory: llama.cpp/build
+    #     run: |
+    #       ./bin/test-backend-ops test -o MUL_MAT
 
       - name: performance testing
         working-directory: llama.cpp/build
         run: |
-          ./test-performance --model ../models/7B/ggml-model-q4_0.bin --backend cann --soc-type ${{ matrix.device }} --threads 1
-    
+         ./bin/test-backend-ops perf -o MUL_MAT
+
+      - name: Run llama-bench
+        working-directory: llama.cpp/build
+        run: |
+          ./bin/llama-bench \
+            --model models/Qwen2.5-0.5B-Instruct \
+            --prompt "What is the capital of France?" \
+            --n 1 \
+            --batch 1 \
+            --max-len 128 \
+            --num-threads $(nproc)
       
 
