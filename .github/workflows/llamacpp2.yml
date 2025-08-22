@@ -36,6 +36,10 @@ on:
       - "llamacpp"
     paths:
       - ".github/workflows/llamacpp2.yml"
+      
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   prepare:
