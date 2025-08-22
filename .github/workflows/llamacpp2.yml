@@ -59,14 +59,17 @@ jobs:
     needs: prepare
     strategy:
       matrix:
-        arch: [x86, aarch64]
+        image: |
+          ${{ needs.prepare.outputs.runner == 'linux-aarch64-310p-1' || needs.prepare.outputs.runner == 'linux-aarch64-310p-2'
+           && 'ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11,ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11'
+           || 'ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11,ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11,ascendai/cann:latest' }}
         device:
           - 'ascend910b3'
         build:
           - 'Release'
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
-      image: ${{ needs.prepare.outputs.image }}
+      image: ${{ matrix.image }}
       env:
         HF_ENDPOINT: https://hf-mirror.com
 
