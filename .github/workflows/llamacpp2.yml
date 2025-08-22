@@ -83,8 +83,8 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          apt-get update -y && \
-          apt-get install -y \
+          sudo apt-get update -y && \
+          sudo apt-get install -y \
               git gcc g++ make cmake ninja-build curl \
               libgl1 libglib2.0-0 libsndfile1 \
               python-is-python3 python3-pip
