@@ -48,8 +48,8 @@ jobs:
         id: set
         run: |
           echo "runner=${{ inputs.runner  || 'linux-aarch64-310p-1' }}" >> $GITHUB_OUTPUT
-          if [[ runner == "linux-aarch64-310p-1" || \
-                runner == "linux-aarch64-310p-2" ]]; then
+          if [[ $runner == "linux-aarch64-310p-1" || \
+                $runner == "linux-aarch64-310p-2" ]]; then
             echo 'images=["ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]' >> $GITHUB_OUTPUT
           else
             echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11","ascendai/cann:latest"]' >> $GITHUB_OUTPUT
@@ -123,9 +123,9 @@ jobs:
           cmake --build build -j $(nproc)
     
       - name: test backend ops
-        working-directory: llama.cpp/build
+        working-directory: llama.cpp/build/bin
         run: |
-          ./bin/test-backend-ops test -o MUL_MAT
+          ./test-backend-ops test -o MUL_MAT
     
       - name: Download model
         run: |
@@ -141,15 +141,15 @@ jobs:
     #       ./bin/test-backend-ops test -o MUL_MAT
 
       - name: performance testing
-        working-directory: llama.cpp/build
+        working-directory: llama.cpp/build/bin
         run: |
-         ./bin/test-backend-ops perf -o MUL_MAT
+         ./test-backend-ops perf -o MUL_MAT
 
       - name: Run llama-bench
         working-directory: llama.cpp/build
         run: |
           ./bin/llama-bench \
-            --model models/Qwen2.5-0.5B-Instruct \
+            --model ../models/Qwen2.5-0.5B-Instruct \
             --prompt "What is the capital of France?" \
             --n 1 \
             --batch 1 \
