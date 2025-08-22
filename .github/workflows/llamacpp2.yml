@@ -48,8 +48,8 @@ jobs:
         id: set
         run: |
           echo "runner=${{ inputs.runner  || 'linux-aarch64-310p-1' }}" >> $GITHUB_OUTPUT
-          if [[ $runner == "linux-aarch64-310p-1" || \
-                $runner == "linux-aarch64-310p-2" ]]; then
+          if [[ ${{ runner }} == "linux-aarch64-310p-1" || \
+                ${{ runner }} == "linux-aarch64-310p-2" ]]; then
             echo 'images=["ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]' >> $GITHUB_OUTPUT
           else
             echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11","ascendai/cann:latest"]' >> $GITHUB_OUTPUT
@@ -122,10 +122,19 @@ jobs:
             -DSOC_TYPE=${{ matrix.device }}
           cmake --build build -j $(nproc)
     
+      - name: Define operator list
+        id: define-ops
+        run: |
+            echo "ops=MUL_MAT,ADD_MAT,SUB_MAT,DIV_MAT" >> $GITHUB_OUTPUT
+
       - name: test backend ops
         working-directory: llama.cpp/build/bin
         run: |
-          ./test-backend-ops test -o MUL_MAT
+          for op in $(echo ${{ steps.define-ops.outputs.ops }} | tr ',' '\n')
+          do
+            echo "Testing operator: $op"
+            ./test-backend-ops test -o $op
+          done
     
       - name: Download model
         run: |
