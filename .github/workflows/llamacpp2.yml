@@ -66,6 +66,12 @@ jobs:
         HF_ENDPOINT: https://hf-mirror.com
 
     steps:
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        with:
+          tool-cache: true
+          docker-images: false
+
       - name: Show NPU info
         run: |
           npu-smi info
@@ -152,19 +158,23 @@ jobs:
         run: |
           ./bin/llama-perplexity \
             --model ../models/Qwen2.5-0.5B-Instruct \
-            --prompt "What is the capital of France?" \
-            -n 1 \
-            --batch-size 1 \
-            --log-file accuracy.json
+            -f ./datasets/wikitext2/test.txt \
+            -t 16 \
+            -c 2048 \
+            --n-seq-max 1
 
       - name: Run llama-bench
         working-directory: llama.cpp/build
         run: |
           ./bin/llama-bench \
             --model ../models/Qwen2.5-0.5B-Instruct \
-            -n 1 \
-            --batch-size 1 \
-            --threads $(nproc)
+            -p "Hello world, this is a benchmark test." \
+            -n 512 \
+            -t 16 \
+            -c 2048 \
+            --n-seq-max 1 \
+            --n-prompt 32,64,128 \
+            --n-batch 32,64,128
 
       - name: Run llama-batched-bench
         working-directory: llama.cpp/build
