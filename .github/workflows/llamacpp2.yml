@@ -78,8 +78,7 @@ jobs:
         run: |
           apt-get update -y && \
           apt-get install -y \
-              git gcc g++ make cmake ninja-build curl \
-              libcurl4-openssl-dev
+              git gcc g++ make cmake ninja-build curl
 
       - name: Config git
         run: |
