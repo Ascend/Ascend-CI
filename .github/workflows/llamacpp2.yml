@@ -79,7 +79,7 @@ jobs:
           apt-get update -y && \
           apt-get install -y \
               git gcc g++ make cmake ninja-build curl \
-              libssl-dev libcurl4-openssl-dev
+              libcurl4-openssl-dev
 
       - name: Config git
         run: |
@@ -109,11 +109,13 @@ jobs:
         working-directory: llama.cpp
         run: |
           export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${ASCEND_TOOLKIT_HOME}/$(uname -m)-linux/devlib/:${LD_LIBRARY_PATH}
-  
+          
+          find / -name curl.h 2>/dev/null
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DGGML_CANN=on \
             -DSOC_TYPE=${{ matrix.device }}
+            -DLLAMA_CURL=OFF
           cmake --build build -j $(nproc)
     
       - name: Define operator list
