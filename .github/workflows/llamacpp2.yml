@@ -41,6 +41,7 @@ jobs:
         id: set
         run: |
           echo "runner=${{ inputs.runner  || 'linux-arm64-npu-2' }}" >> $GITHUB_OUTPUT
+          runner=${{ inputs.runner  || 'linux-arm64-npu-2' }}
           if [[ ${{ runner }} == "linux-aarch64-310p-1" || \
                 ${{ runner }} == "linux-aarch64-310p-2" ]]; then
             echo 'images=["ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]' >> $GITHUB_OUTPUT
