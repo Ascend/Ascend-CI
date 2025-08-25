@@ -163,5 +163,17 @@ jobs:
             -n 1 \
             --batch-size 1 \
             --threads $(nproc)
+
+      - name: Run llama-batched-bench
+        working-directory: llama.cpp/build
+        run: |
+          ./bin/llama-batched-bench \
+            --model ../models/Qwen2.5-0.5B-Instruct \
+            -c 2048 \
+            -b 128 \
+            -ub 512 \
+            -npp 32,64 \
+            -ntg 32,64 \
+            -npl 1,2,4,8,16,32
       
 
