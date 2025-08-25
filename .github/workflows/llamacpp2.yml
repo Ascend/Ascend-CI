@@ -79,7 +79,7 @@ jobs:
           apt-get update -y && \
           apt-get install -y \
               git gcc g++ make cmake ninja-build curl \
-              libssl-dev libcurl4-openssl-dev
+              libcurl4-openssl-dev
 
       - name: Config git
         run: |
@@ -175,5 +175,14 @@ jobs:
             -npp 32,64 \
             -ntg 32,64 \
             -npl 1,2,4,8,16,32
-      
+
+      - name: Run llama-parallel
+        working-directory: llama.cpp/build
+        run: |
+          ./bin/llama-parallel \
+            --model ../models/Qwen2.5-0.5B-Instruct \
+            -n 1 \
+            --batch-size 1 \
+            --threads $(nproc) \
+            --log-file parallel.json
 
