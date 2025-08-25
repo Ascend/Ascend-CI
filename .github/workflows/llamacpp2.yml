@@ -40,7 +40,7 @@ jobs:
       - name: Set outputs
         id: set
         run: |  
-          runner=${{ inputs.runner  || 'linux-aarch64-310p-1' }}
+          runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
           echo "runner=${runner}" >> $GITHUB_OUTPUT
           if [[ ${runner} == "linux-aarch64-310p-1" || \
                 ${runner} == "linux-aarch64-310p-2" ]]; then
