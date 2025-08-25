@@ -14,17 +14,6 @@ on:
           - linux-aarch64-310p-2
         default: "linux-arm64-npu-1"
         description: "The runner selected to run on"
-    #   image:
-    #     required: true
-    #     type: choice
-    #     options:
-    #         - ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
-    #         - ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11
-    #         - ascendai/cann:latest
-    #         - ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11
-    #         - ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11
-    #     default: "ascendai/cann:latest"
-    #     description: "The docker image which will be loaded"
     
   pull_request:
     branches:
@@ -36,7 +25,7 @@ on:
       - "llamacpp"
     paths:
       - ".github/workflows/llamacpp2.yml"
-      
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -51,7 +40,7 @@ jobs:
       - name: Set outputs
         id: set
         run: |
-          echo "runner=${{ inputs.runner  || 'linux-aarch64-310p-1' }}" >> $GITHUB_OUTPUT
+          echo "runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
           if [[ ${{ runner }} == "linux-aarch64-310p-1" || \
                 ${{ runner }} == "linux-aarch64-310p-2" ]]; then
             echo 'images=["ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]' >> $GITHUB_OUTPUT
@@ -129,7 +118,14 @@ jobs:
       - name: Define operator list
         id: define-ops
         run: |
-            echo "ops=MUL_MAT,ADD_MAT,SUB_MAT,DIV_MAT" >> $GITHUB_OUTPUT
+            echo "ops=REPEAT, GET_ROWS, SET_ROWS, DUP, ADD, ADD1, SUB, ACC, MUL,
+            DIV, ABS, NEG, GELU, GELU_ERF, SILU, GELU_QUICK, TANH, RELU, SIGMOID,
+            HARDSIGMOID, HARDSWISH, EXP, ELU, SGN, STEP, REGLU, GEGLU, GEGLU_REF, SWIGLU,
+            GEGLU_QUICK, NORM, GROUP_NORM, CONCAT, UPSCALE, PAD, ARANGE, TIMESTEP_EMBEDDING,
+            LEAKY_RELU, RMS_NORM, MUL_MAT, MUL_MAT_ID, SCALE, SQR, SQRT, CLAMP,
+            CPY, CONT, DIAG_MASK_INF, SOFT_MAX, ROPE, IM2COL, POOL_2D, SUM, SUM_ROWS,
+            ARGSORT, ARGMAX, COS, SIN, CONV_TRANSPOSE_1D, LOG, MEAN, PAD_REFLECT_1D,
+            COUNT_EQUAL, FLASH_ATTN_EXT" >> $GITHUB_OUTPUT
 
       - name: test backend ops
         working-directory: llama.cpp/build/bin
@@ -148,25 +144,23 @@ jobs:
             --resume-download Qwen/Qwen2.5-0.5B-Instruct \
             --local-dir llama.cpp/models/Qwen2.5-0.5B-Instruct
 
-    #   - name: Accuracy test
-    #     working-directory: llama.cpp/build
-    #     run: |
-    #       ./bin/test-backend-ops test -o MUL_MAT
-
-      - name: performance testing
-        working-directory: llama.cpp/build/bin
+      - name: Accuracy check
+        working-directory: llama.cpp/build
         run: |
-         ./test-backend-ops perf -o MUL_MAT
+          ./bin/llama-perplexity \
+            --model ../models/Qwen2.5-0.5B-Instruct \
+            --prompt "What is the capital of France?" \
+            -n 1 \
+            --batch-size 1 \
+            --log-file accuracy.json
 
       - name: Run llama-bench
         working-directory: llama.cpp/build
         run: |
           ./bin/llama-bench \
             --model ../models/Qwen2.5-0.5B-Instruct \
-            --prompt "What is the capital of France?" \
-            --n 1 \
-            --batch 1 \
-            --max-len 128 \
-            --num-threads $(nproc)
+            -n 1 \
+            --batch-size 1 \
+            --threads $(nproc)
       
 
