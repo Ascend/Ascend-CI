@@ -88,7 +88,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Checkout benchmark
+      - name: Checkout llama.cpp
         uses: actions/checkout@v4
         with:
           repository: ggerganov/llama.cpp
@@ -185,4 +185,4 @@ jobs:
             --batch-size 1 \
             --threads $(nproc) \
             --log-file parallel.json
-
+#
