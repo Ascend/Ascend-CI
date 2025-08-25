@@ -41,9 +41,9 @@ jobs:
         id: set
         run: |  
           runner=${{ inputs.runner  || 'linux-aarch64-310p-1' }}
-          echo "runner=${ runner }" >> $GITHUB_OUTPUT
-          if [[ ${ runner } == "linux-aarch64-310p-1" || \
-                ${ runner } == "linux-aarch64-310p-2" ]]; then
+          echo "runner=${runner}" >> $GITHUB_OUTPUT
+          if [[ ${runner} == "linux-aarch64-310p-1" || \
+                ${runner} == "linux-aarch64-310p-2" ]]; then
             echo 'images=["ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]' >> $GITHUB_OUTPUT
           else
             echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11","ascendai/cann:latest"]' >> $GITHUB_OUTPUT
@@ -77,9 +77,9 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          apt-get update -y && \
+          apt-get update -y
           apt-get install -y \
-              git gcc g++ make cmake ninja-build curl
+              git gcc g++ make cmake ninja-build curl libcurl4-openssl-dev
 
       - name: Config git
         run: |
