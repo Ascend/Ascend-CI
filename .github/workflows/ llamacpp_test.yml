@@ -1,0 +1,287 @@
+name: Test llamacpp
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+          - linux-aarch64-310p-1
+          - linux-aarch64-310p-2
+        default: "linux-arm64-npu-1"
+        description: "The runner selected to run on"
+    
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - ".github/workflows/llamacpp_test.yml"
+  push:
+    branches:
+      - "main"
+    paths:
+      - ".github/workflows/llamacpp_test.yml"
+  
+  schedule:
+    - cron: '0 12 * * *'
+
+      
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.set.outputs.runner }}
+      images: ${{ steps.set.outputs.images }}
+      device: ${{ steps.set.outputs.device }}
+    steps:
+      - name: Set outputs
+        id: set
+        run: |  
+          runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
+          echo "runner=${runner}" >> $GITHUB_OUTPUT
+          if [[ ${runner} == "linux-aarch64-310p-1" || \
+                ${runner} == "linux-aarch64-310p-2" ]]; then
+            echo 'images=["ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]' >> $GITHUB_OUTPUT
+            echo 'device=["ascend310p"]' >> $GITHUB_OUTPUT
+          else
+            echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11"]' >> $GITHUB_OUTPUT #,"ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11","ascendai/cann:latest"
+            echo 'device=["ascend910b3"]' >> $GITHUB_OUTPUT
+          fi
+
+  test:
+    name: Build llama.cpp on OpenEuler for Arm64
+    needs: prepare
+    strategy:
+      matrix:
+        image : ${{ fromJSON(needs.prepare.outputs.images) }}
+        device: ${{ fromJSON(needs.prepare.outputs.device) }}
+        build:
+          - 'Release'
+    runs-on: ${{ needs.prepare.outputs.runner }}
+    container:
+      image: ${{ matrix.image }}
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
+
+    steps:
+      - name: Show NPU info
+        run: |
+          npu-smi info
+
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Install system dependencies
+        run: |
+          pkg_manager=""
+          for cmd in apt yum dnf zypper pacman; do
+          if command -v $cmd >/dev/null 2>&1; then
+              pkg_manager=$cmd
+              break
+          fi
+          done
+
+          if [ "$pkg_manager" = "apt" ]; then
+            apt-get update
+            apt-get install -y \
+              git gcc g++ make cmake ninja-build curl \
+              libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip
+          elif [ "$pkg_manager" = "yum" ] || [ "$pkg_manager" = "dnf" ]; then
+            $pkg_manager install -y \
+              git gcc gcc-c++ make cmake libcurl-devel unzip
+          elif [ "$pkg_manager" = "zypper" ]; then
+            zypper install -y \
+              git gcc gcc-c++ make cmake libcurl-devel unzip
+          elif [ "$pkg_manager" = "pacman" ]; then
+            pacman -Syu --noconfirm
+            pacman -S --noconfirm \
+              git gcc make cmake curl \
+              glibc libgl libsndfile libcurl-compat unzip
+          else
+            echo "Unsupported package manager. Please install dependencies manually."
+            exit 1
+          fi
+
+      - name: Config git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout llama.cpp
+        uses: actions/checkout@v4
+        with:
+          repository: ggerganov/llama.cpp
+          path: llama.cpp
+
+      - name: Install torch
+        run: |
+          pip install torch torch_npu==2.7.1rc1 transformers datasets evaluate huggingface_hub mistral_common sentencepiece
+
+      - name: List torch version
+        id: list-torch-version
+        shell: bash
+        run: |
+          torch_version=$(python -c "from importlib.metadata import version;print(version('torch'))")
+          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
+
+      - name: Build llama.cpp
+        working-directory: llama.cpp
+        run: |
+          export LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/lib64:${ASCEND_TOOLKIT_HOME}/$(uname -m)-linux/devlib/:${LD_LIBRARY_PATH}
+
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
+            -DGGML_CANN=on \
+            -DSOC_TYPE=${{ matrix.device }}
+          cmake --build build -j $(nproc)
+    
+      - name: Define operator list
+        id: define-ops
+        run: |
+            echo "ops=ABS,ACC,ADD,ADD1,ARANGE,ARGMAX,ARGSORT,CLAMP,CONCAT,CONT,CONV_2D,CONV_2D_DW, \
+              CONV_TRANSPOSE_1D,CONV_TRANSPOSE_2D,COS,COUNT_EQUAL,CPY,CROSS_ENTROPY_LOSS,CROSS_ENTROPY_LOSS_BACK, \
+              DIAG_MASK_INF,DIV,DUP,ELU,EXP,FLASH_ATTN_EXT,GATED_LINEAR_ATTN,GEGLU,GEGLU_ERF,GEGLU_QUICK, \
+              GELU,GELU_ERF,GELU_QUICK,GET_ROWS,GET_ROWS_BACK,GROUP_NORM,HARDSIGMOID,HARDSWISH,IM2COL,L2_NORM, \
+              LEAKY_RELU,LOG,MEAN,MUL,MUL_MAT,MUL_MAT_ID,NEG,NORM,OPT_STEP_ADAMW,OUT_PROD,PAD,PAD_REFLECT_1D, \
+              POOL_2D,REGLU,RELU,REPEAT,REPEAT_BACK,RMS_NORM,RMS_NORM_BACK,RMS_NORM_MUL_ADD,ROLL,ROPE,ROPE_BACK, \
+              RWKV_WKV6,RWKV_WKV7,SCALE,SET,SET_ROWS,SGN,SIGMOID,SILU,SILU_BACK,SIN,SOFTCAP,SOFT_MAX,SOFT_MAX_BACK, \
+              SQR,SQRT,SSM_CONV,SSM_SCAN,STEP,SUB,SUM,SUM_ROWS,SWIGLU,TANH,TIMESTEP_EMBEDDING,UPSCALE" >> $GITHUB_OUTPUT
+
+      - name: test backend ops
+        working-directory: llama.cpp/build/bin
+        run: |
+          failed_ops=""
+          for op in $(echo ${{ steps.define-ops.outputs.ops }} | tr ',' '\n')
+          do
+            echo "Testing operator: $op"
+            if ! ./test-backend-ops test -o $op; then
+              echo "Operator $op failed, continuing..."
+              failed_ops="${failed_ops}${op}\n"
+            fi
+          done
+
+          if [ -n "$failed_ops" ]; then
+            echo "### Failed Operators" >> $GITHUB_STEP_SUMMARY
+            echo -e "$failed_ops" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "All operators passed successfully!" >> $GITHUB_STEP_SUMMARY
+          fi
+    
+      - name: Download model and dateset
+        working-directory: llama.cpp
+        run: |
+          mkdir -p models/Qwen2.5-0.5B-Instruct
+          huggingface-cli download \
+            --resume-download Qwen/Qwen2.5-0.5B-Instruct \
+            --local-dir models/Qwen2.5-0.5B-Instruct
+          
+          mkdir -p models/Qwen2.5-VL-3B-Instruct
+          huggingface-cli download \
+            --resume-download Qwen/Qwen2.5-VL-3B-Instruct \
+            --local-dir models/Qwen2.5-VL-3B-Instruct
+          
+          mkdir -p data
+          huggingface-cli download --repo-type dataset\
+            --resume-download ggml-org/ci \
+            --local-dir data
+          
+          unzip -o data/wikitext-2-raw-v1.zip -d data/
+          rm -f data/wikitext-2-raw-v1.zip
+
+      - name: convert Qwen2.5 model
+        working-directory: llama.cpp
+        run: |
+          python3 convert_hf_to_gguf.py models/Qwen2.5-0.5B-Instruct \
+            --outfile models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+            --outtype f16
+
+          python3 convert_hf_to_gguf.py models/Qwen2.5-VL-3B-Instruct \
+            --outfile models/Qwen2.5-VL-3B-Instruct/ggml-model-f16.gguf \
+            --outtype f16
+
+          python3 convert_hf_to_gguf.py models/Qwen2.5-VL-3B-Instruct \
+            --outfile models/Qwen2.5-VL-3B-Instruct/mmproj.gguf \
+            --outtype f16 \
+            --mmproj
+
+      - name: Accuracy check
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-perplexity  \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+            -f data/wikitext-2-raw/wiki.test.raw \
+            -t 8 \
+            -c 4096 \
+            -ngl 32 \
+            --batch-size 512 \
+            --ppl-stride 64 \
+            --ppl-output-type 1
+
+      - name: Run llama-bench
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-bench \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+            --n-prompt 256 \
+            --n-gen 64 \
+            --batch-size 512 \
+            --ubatch-size 128 \
+            --threads 16 \
+            --repetitions 3 \
+            --output json \
+            --progress
+
+      - name: Run llama-batched-bench
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-batched-bench \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+              -c 8192 \
+              -b 512 \
+              -ub 256 \
+              -t 16 \
+              -npp 128,256 \
+              -ntg 128,256 \
+              -npl 1,2,4,8,16 \
+              --output-format jsonl
+
+      - name: Run llama-parallel
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-parallel \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+              -p "The quick brown fox jumps over the lazy dog." \
+              -n 128 \
+              -c 8192 \
+              -b 512 \
+              -ub 128 \
+              -t 8 \
+              --sequences 8 \
+              --junk 4 \
+              -pps \
+              --verbose-prompt
+
+      - name: Run llama-mtmd-cli
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-mtmd-cli \
+            --model models/Qwen2.5-VL-3B-Instruct/ggml-model-f16.gguf \
+            --mmproj models/Qwen2.5-VL-3B-Instruct/mmproj.gguf \
+            --image ../src/images/dog.png \
+            --image media/llama0-banner.png \
+            -p "Describe the image in detail." \
+            -t 4 \
+            -n 128 \
+            --chat-template vicuna
