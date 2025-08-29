@@ -17,15 +17,19 @@ on:
     
   pull_request:
     branches:
-      - "llamacpp"
+      - "main"
     paths:
-      - ".github/workflows/llamacpp2.yml"
+      - ".github/workflows/llamacpp_test.yml"
   push:
     branches:
-      - "llamacpp"
+      - "main"
     paths:
-      - ".github/workflows/llamacpp2.yml"
+      - ".github/workflows/llamacpp_test.yml"
+  
+  schedule:
+    - cron: '0 12 * * *'
 
+      
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
