@@ -66,8 +66,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pybind11
-          python3 -m pybind11 --cmakedir
+          pip install "pybind11>=2.10,<3"
+          python3 -m pybind11 --cmake
 
           pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           pip install torch_npu==2.5.1

@@ -10,24 +10,14 @@ WORKDIR /workspace
 
 # Replace Ubuntu package sources with Tsinghua Mirror for faster downloads in China
 # Install essential system dependencies and libraries
-RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        git \
-        gcc \
-        g++ \
-        make \
-        cmake \
-        ninja-build \
-        curl \
-        libgl1 \
-        libglib2.0-0 \
-        libsndfile1 \
-        libcurl4-openssl-dev \
-        unzip && \
+RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y \
+    git gcc g++ make cmake ninja-build curl \
+    libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
     # Clean up apt cache to reduce image size
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+&&  apt-get clean \
+&&  rm -rf /var/lib/apt/lists/*
 
 # Configure pip to use Tsinghua Mirror for faster Python package installation in China
 RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
@@ -62,6 +52,12 @@ RUN git clone https://github.com/alibaba/ROLL.git && \
     pip install -r requirements_common.txt && \
     pip install deepspeed==0.16.0 && \
     cd ..
+
+# Set the final working directory
+WORKDIR /workspace
+
+# Set HF_ENDPOINT again to ensure it's available in the final environment
+ENV HF_ENDPOINT=https://hf-mirror.com
 
 # Default command: Display NPU information and launch a Bash shell
 # This helps verify the NPU environment upon container start
