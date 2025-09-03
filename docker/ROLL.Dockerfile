@@ -1,55 +1,68 @@
-# ==============================================================================
-# ARGUMENTS
-# ==============================================================================
+# Use the official CANN container image with Python 3.11 on Ubuntu 22.04 for Ascend NPU
+FROM ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
 
-# Define the CANN base image for easier version updates later
-ARG CANN_BASE_IMAGE=quay.io/ascend/cann:8.2.rc1-910b-ubuntu22.04-py3.11
+# Set environment variables: use HF mirror for faster downloads in China
+ENV HF_ENDPOINT=https://hf-mirror.com \
+    DEBIAN_FRONTEND=noninteractive
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PIP_ROOT_USER_ACTION=ignore
-
-RUN pip install --upgrade pip setuptools wheel --trusted-host mirrors.aliyun.com --index-url https://mirrors.aliyun.com/pypi/simple/
-
-RUN pip uninstall -y torch torchvision torch-tensorrt \
-    flash_attn transformer-engine \
-    cudf dask-cuda cugraph cugraph-service-server cuml raft-dask cugraph-dgl cugraph-pyg dask-cudf
-
-RUN pip install torch==2.7.1 torch==2.7.1rc1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-
-RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
-    { \
-    echo "deb https://mirrors.aliyun.com/ubuntu/ jammy main restricted universe multiverse"; \
-    echo "deb https://mirrors.aliyun.com/ubuntu/ jammy-security main restricted universe multiverse"; \
-    echo "deb https://mirrors.aliyun.com/ubuntu/ jammy-updates main restricted universe multiverse"; \
-    echo "deb https://mirrors.aliyun.com/ubuntu/ jammy-backports main restricted universe multiverse"; \
-    } > /etc/apt/sources.list
-
-RUN apt-get update && apt-get install -y openjdk-11-jdk 
-ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
-
-RUN pip uninstall -y opencv opencv-python opencv-python-headless && \
-    rm -rf /usr/local/lib/python3.10/dist-packages/cv2/ && \
-    pip install opencv-python-headless==4.11.0.86 --trusted-host mirrors.aliyun.com --index-url https://mirrors.aliyun.com/pypi/simple/
-
-RUN pip install "numpy==1.26.4" "optree>=0.13.0" "spacy==3.7.5" "weasel==0.4.1" \
-    transformer-engine[pytorch]==2.2.0 megatron-core==0.11.0 deepspeed==0.16.4 \
-    --trusted-host mirrors.aliyun.com --index-url https://mirrors.aliyun.com/pypi/simple/
-
-RUN pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.2.post1/flash_attn-2.7.2.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
-
-RUN pip install vllm==0.10.0 \
-    --trusted-host mirrors.aliyun.com --index-url https://mirrors.aliyun.com/pypi/simple/
-
-WORKDIR /build
-COPY . .
-
-ARG apex_url=git+https://github.com/NVIDIA/apex.git@25.04
-RUN pip uninstall -y apex && \
-    MAX_JOBS=32 NINJA_FLAGS="-j32" NVCC_APPEND_FLAGS="--threads 32" \
-    pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation \
-    --config-settings "--build-option=--cpp_ext --cuda_ext --parallel 32" ${apex_url}
-
-RUN rm -rf *
+# Set the working directory inside the container
 WORKDIR /workspace
 
-RUN apt-get install -y zip
+# Replace Ubuntu package sources with Tsinghua Mirror for faster downloads in China
+# Install essential system dependencies and libraries
+RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git \
+        gcc \
+        g++ \
+        make \
+        cmake \
+        ninja-build \
+        curl \
+        libgl1 \
+        libglib2.0-0 \
+        libsndfile1 \
+        libcurl4-openssl-dev \
+        unzip && \
+    # Clean up apt cache to reduce image size
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Configure pip to use Tsinghua Mirror for faster Python package installation in China
+RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+# Install PyTorch (CPU version) and the compatible NPU plugin for Ascend 910B
+# Note: Versions are pinned for compatibility with CANN 8.2.RC1
+RUN pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cpu && \
+    pip install torch_npu==2.7.1rc1
+
+# Install common deep learning and AI development libraries
+RUN pip install transformers==4.52.4 huggingface_hub sentencepiece
+
+# Clone and install vLLM (Version 0.8.4) from source
+# VLLM_TARGET_DEVICE=empty is set to avoid device-specific builds at this stage
+RUN git clone --depth=1 --branch=v0.8.4 https://github.com/vllm-project/vllm.git && \
+    cd vllm && \
+    VLLM_TARGET_DEVICE=empty pip install -v -e . && \
+    cd ..
+
+# Clone and install the Ascend backend for vLLM (Version 0.8.4rc2)
+# COMPILE_CUSTOM_KERNELS=1 is essential for building NPU-specific kernels
+RUN git clone --depth=1 --branch=v0.8.4rc2 https://github.com/vllm-project/vllm-ascend.git && \
+    cd vllm-ascend && \
+    export COMPILE_CUSTOM_KERNELS=1 && \
+    pip install -e . && \
+    cd ..
+
+# Clone and install the ROLL framework from Alibaba's repository
+# Install its common requirements and the specified version of DeepSpeed
+RUN git clone https://github.com/alibaba/ROLL.git && \
+    cd ROLL && \
+    pip install -r requirements_common.txt && \
+    pip install deepspeed==0.16.0 && \
+    cd ..
+
+# Default command: Display NPU information and launch a Bash shell
+# This helps verify the NPU environment upon container start
+CMD ["bash", "-c", "npu-smi info && bash"]

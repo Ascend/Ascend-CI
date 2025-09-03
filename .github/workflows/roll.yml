@@ -40,6 +40,8 @@ jobs:
       - name: Show NPU info
         run: |
           npu-smi info
+          echo $ASCEND_HOME
+          echo $LD_LIBRARY_PATH | grep Ascend 
 
       - name: Config mirrors
         run: |
@@ -50,7 +52,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-            git gcc g++ make cmake ninja-build curl \
+            git gcc g++ make cmake ninja-build curl python3-dev\
             libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip
 
       - name: Checkout
@@ -64,6 +66,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install pybind11
+          python3 -m pybind11 --cmake
+
           pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
           pip install torch_npu==2.5.1
           pip install transformers==4.52.4 huggingface_hub sentencepiece
@@ -73,7 +78,7 @@ jobs:
         with:
           repository: vllm-project/vllm
           fetch-depth: 0
-          ref: v0.8.4
+          ref: refs/tags/v0.8.4
           path: vllm
 
       - name: Checkout vllm-ascend
@@ -81,7 +86,7 @@ jobs:
         with:
           repository: vllm-project/vllm-ascend
           fetch-depth: 0
-          ref: v0.8.4rc2
+          ref: refs/tags/v0.8.4rc2
           path: vllm-ascend
 
       - name: Install vllm
