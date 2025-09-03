@@ -12,6 +12,16 @@ on:
           - linux-arm64-npu-4
         default: linux-arm64-npu-1
         description: "The runner selected to run on"
+  push:
+    branches:
+      - roll
+    paths:
+      - '.github/workflows/roll.yml'
+  pull_request:
+    branches:
+      - roll
+    paths:
+      - '.github/workflows/roll.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
