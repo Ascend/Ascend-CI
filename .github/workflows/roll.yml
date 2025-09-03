@@ -10,6 +10,8 @@ on:
           - linux-arm64-npu-1
           - linux-arm64-npu-2
           - linux-arm64-npu-4
+        default: linux-arm64-npu-1
+        description: "The runner selected to run on"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,6 +20,11 @@ concurrency:
 jobs:
   roll:
     runs-on: ${{ inputs.runner }}
+    container:
+      image: ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
+    env:
+      HF_ENDPOINT: https://hf-mirror.com
+
     steps:
       - name: Show NPU info
         run: |
@@ -46,17 +53,88 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install torch==2.7.1 torch==2.7.1rc1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-          pip install vllm==0.10.0
-          pip install "numpy==1.26.4" "optree>=0.13.0" "spacy==3.7.5" "weasel==0.4.1"  transformers==4.52.4\
-            transformer-engine[pytorch]==2.2.0 megatron-core==0.11.0 deepspeed==0.16.4 \
-            --trusted-host mirrors.aliyun.com --index-url https://mirrors.aliyun.com/pypi/simple/
-          pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.2.post1/flash_attn-2.7.2.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+          pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install torch_npu==2.5.1
+          pip install transformers==4.52.4 huggingface_hub==0.18.1 sentencepiece==0.1.99
+
+      - name: Checkout vllm
+        uses: actions/checkout@v4
+        with:
+          repository: vllm-project/vllm
+          fetch-depth: 0
+          ref: v0.8.4
+          path: vllm
+
+      - name: Checkout vllm-ascend
+        uses: actions/checkout@v4
+        with:
+          repository: vllm-project/vllm-ascend
+          fetch-depth: 0
+          ref: v0.8.4rc2
+          path: vllm-ascend
+
+      - name: Install vllm
+        working-directory: vllm
+        run: |
+          VLLM_TARGET_DEVICE=empty pip install -v -e .
+
+      - name: Install vllm-ascend
+        working-directory: vllm-ascend
+        run: |
+          export COMPILE_CUSTOM_KERNELS=1
+          pip install -e .
 
       - name: Install ROLL
         working-directory: ROLL
         run: |
-          pip install -e .
+          pip install -r requirements_common.txt
+          pip install deepspeed==0.16.0
 
+      - name: Download Qwen2.5 model
+        working-directory: ROLL
+        run: |
+          mkdir -p Qwen/Qwen2.5-0.5B-Instruct
 
-          
+          huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct \
+           --local-dir Qwen/Qwen2.5-0.5B-Instruct
+      
+      - name: Run ROLL with lora finetune
+        working-directory: ROLL
+        run: |
+          deepspeed --num_nodes 1 --num_gpus 1 examples/finetune.py \
+            --model_name_or_path ./Qwen/Qwen2.5-0.5B-Instruct \
+            --data_path ./data/alpaca_data.json \
+            --output_dir ./output/roll-qwen2.5-0.5b-instruct-finetuned \
+            --per_device_train_batch_size 1 \
+            --per_device_eval_batch_size 1 \
+            --gradient_accumulation_steps 16 \
+            --evaluation_strategy "steps" \
+            --eval_steps 200 \
+            --save_strategy "steps" \
+            --save_steps 200 \
+            --logging_steps 10 \
+            --learning_rate 2e-4 \
+            --weight_decay 0.01 \
+            --num_train_epochs 1 \
+            --lr_scheduler_type "cosine" \
+            --warmup_steps 100 \
+            --fp16 False \
+            --bf16 True \
+            --deepspeed ./configs/ds_config_zero2.json \
+            --lora_r 8 \
+            --lora_alpha 16 \
+            --lora_dropout 0.05 \
+            --report_to "none" \
+            --load_in_8bit False \
+            --gradient_checkpointing True
+
+      - name: Run agentic_pipeline_frozen_lake_single_node_demo
+        working-directory: ROLL
+        run: |
+          python examples/agentic_pipeline_frozen_lake_single_node_demo.py
+            --model_name_or_path ./Qwen/Qwen2.5-0.5B-Instruct
+            --lora_path ./output/roll-qwen2.5-0.5b-instruct-finetuned
+            --num_episodes 3
+            --max_steps_per_episode 10
+            --bf16 True
+            --seed 42
