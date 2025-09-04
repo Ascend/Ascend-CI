@@ -64,6 +64,7 @@ jobs:
 
       - name : Set up conda
         run: |
+          bash -c "source ~/miniconda3/etc/profile.d/conda.sh && conda init"
           conda create -n py310 python=3.10 -y
           conda activate py310
 
