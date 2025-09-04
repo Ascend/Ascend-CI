@@ -165,6 +165,60 @@ def main() -> None:
                 ]
             )
 
+        change_log_path.parent.mkdir(parents=True, exist_ok=True)
+        new_change_content = "\n".join(change_lines) + "\n"
+        previous_change_content = ""
+        if change_log_path.exists():
+            previous_change_content = change_log_path.read_text(encoding="utf-8")
+        if previous_change_content != new_change_content:
+            change_log_path.write_text(new_change_content, encoding="utf-8")
+
+    print(markdown)
+    if args.summary_file:
+        summary_path = Path(args.summary_file)
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        if summary_path.exists():
+            previous_content = summary_path.read_text(encoding="utf-8")
+            previous_classification = parse_summary_table(previous_content)
+
+    changed_ops: List[tuple[str, str | None, str]] = []
+    if previous_classification:
+        for status, ops in classification.items():
+            for op in ops:
+                prev_status = previous_classification.get(op)
+                if prev_status is not None and prev_status != status:
+                    changed_ops.append((op, prev_status, status))
+
+    markdown = format_markdown(classification)
+
+    if changed_ops:
+        change_lines: List[str] = [
+            "",
+            "### Operators with changed status",
+            "",
+            "| Operator | Previous | Current |",
+            "| --- | --- | --- |",
+        ]
+        for op, prev_status, curr_status in sorted(changed_ops):
+            change_lines.append(
+                f"| {op} | {prev_status} ({STATUS_SYMBOLS.get(prev_status, '?')}) | {curr_status} ({STATUS_SYMBOLS.get(curr_status, '?')}) |"
+            )
+
+        for op, prev_status, curr_status in sorted(changed_ops):
+            log_file = log_dir / f"{op}.log"
+            if not log_file.is_file():
+                change_lines.append(f"- {op}: log file not found ({log_file})")
+                continue
+            change_lines.extend(
+                [
+                    "",
+                    f"#### {op} log ({prev_status} -> {curr_status})",
+                    "```text",
+                    tail_lines(log_file),
+                    "```",
+                ]
+            )
+
         markdown = markdown + "\n" + "\n".join(change_lines)
 
     print(markdown)

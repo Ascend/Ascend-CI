@@ -91,6 +91,7 @@
 | UPSCALE | 🟡 |
 
 Tips: ✅ supported, 🟡 partially supported, ❌ fail, ❓ unsupported, 🔍 unknown
+<<<<<<< HEAD
 
 ### Operators with changed status
 
@@ -250,3 +251,5 @@ Backend 2/2: CPU
 2/2 backends passed
 [1;32mOK[0m
 ```
+=======
+>>>>>>> 45e6c6c (Fixed the issue of incorrect output of the llamacpp_ops.md file)

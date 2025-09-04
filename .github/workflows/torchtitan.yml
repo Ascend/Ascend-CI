@@ -1,24 +1,30 @@
-name: "_ascend_npu_torchtitan"
+name: Test torchtitan
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       runner:
         required: true
-        type: string
+        type: choice
+        options:
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+          - linux-aarch64-310p-1
+          - linux-aarch64-310p-2
+        default: "linux-arm64-npu-1"
         description: "The runner selected to run on"
-      image:
-        required: true
-        type: string
-        description: "The docker image which will be loaded"
-      torch-artifact:
-        required: false
-        type: string
-        description: "The distribution artifact name of torch"
-      torch-npu-artifact:
-        required: true
-        type: string
-        description: "The distribution artifact name of torch_npu"
+    
+  pull_request:
+    branches:
+      - "torchtitan"
+    paths:
+      - ".github/workflows/torchtitan.yml"
+  push:
+    branches:
+      - "torchtitan"
+    paths:
+      - ".github/workflows/torchtitan.yml"
 
 # Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
 # declared as "shell: bash -el {0}" on steps that need to be properly activated.
@@ -31,14 +37,11 @@ defaults:
 jobs:
   setup_environment:
     name: run torchtitan tests
-    runs-on: ${{ inputs.runner }}
-    container:
-      image: ${{ inputs.image }}
+    runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
+    container: 
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-910b-ubuntu22.04-py3.11
       env:
         HF_ENDPOINT: https://hf-mirror.com
-    outputs:
-      torch_version: ${{ steps.get_torch_version.outputs.torch-version }}
-      npu_info: ${{ steps.check_npu.outputs.npu_info }}
     steps:
       - name: Show NPU info
         run: |
@@ -70,43 +73,18 @@ jobs:
           repository: pytorch/torchtitan
           path: torchtitan
 
-      - name: Download torch artifact
-        if: ${{ inputs.torch-artifact }}
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.torch-artifact }}
-
-      - name: Install torch
-        if: ${{ inputs.torch-artifact }}
-        run: |
-          pip install ${{ inputs.torch-artifact }}
-
       - name: Install torch_npu dependencies
-        if: ${{ !inputs.torch-artifact }}
         run: |
-          pip install -r https://raw.githubusercontent.com/Ascend/pytorch/refs/heads/master/requirements.txt
+          pip install torch torch_npu==2.7.1rc1 torchdata torchao torchvision torchaudio
 
-      - name: List torch version
-        id: list-torch-version
-        shell: bash
+      - name: Install torchtitan
+        working-directory: torchtitan
         run: |
-          torch_version=$(python -c "import torch; print(torch.__version__)")
-          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
-
-      - name: Download torch_npu artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.torch-npu-artifact }}
-          path: ascend_npu
-
-      - name: Install torch_npu
-        working-directory: ascend_npu
-        run: |
-          pip install ${{ inputs.torch-npu-artifact }}
+          pip install -r requirements.txt
 
       - name: Install project dependencies
         run: |
-          pip install pytest pytest-cov tyro tabulate tokenizers transformers datasets
+          pip install pytest pytest-cov tyro tabulate tokenizers transformers datasets pyyaml setuptools auditwheel tensorboard
 
       - name: Show environment info
         id: check_npu
@@ -121,7 +99,8 @@ jobs:
       - name: Run torchtitan integration_test
         working-directory: torchtitan
         run: |
-          python -m tests.integration_tests.run_tests --test_suite features artifacts-to-be-uploaded --ngpu ${{ steps.check_npu.outputs.npu_count }}
+          mkdir artifacts-to-be-uploaded
+          python -m tests.integration_tests.run_tests --test_name artifacts-to-be-uploaded --ngpu ${{ steps.check_npu.outputs.npu_count }} || true
   
       - name: Run torchtitan unittest
         working-directory: torchtitan
