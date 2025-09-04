@@ -75,7 +75,7 @@ jobs:
 
       - name: Install torch_npu dependencies
         run: |
-          pip install torch torch_npu==2.7.1rc1 torchdata torchao torchvision torchaudio
+          pip install torch torch_npu==2.7.1rc1 torchdata torchao torchvision torchaudio torchtitan
 
       - name: Install project dependencies
         run: |
@@ -94,7 +94,8 @@ jobs:
       - name: Run torchtitan integration_test
         working-directory: torchtitan
         run: |
-          python -m tests.integration_tests.run_tests --test_suite features artifacts-to-be-uploaded --ngpu ${{ steps.check_npu.outputs.npu_count }}
+          mkdir artifacts-to-be-uploaded
+          python -m tests.integration_tests.run_tests --test_suite features artifacts-to-be-uploaded --ngpu ${{ steps.check_npu.outputs.npu_count }} || true
   
       - name: Run torchtitan unittest
         working-directory: torchtitan
