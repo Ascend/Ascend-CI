@@ -85,6 +85,7 @@ jobs:
       - name: Show environment info
         id: check_npu
         run: |
+          export TORCH_DEVICE_BACKEND_AUTOLOAD=0
           npu_is_available=$(python -c "import torch; print(torch.npu.is_available())")
           npu_count=$(python -c "import torch; print(torch.npu.device_count())")
           echo "npu_count=${npu_count}" >> $GITHUB_OUTPUT
