@@ -65,6 +65,11 @@ jobs:
           repository: alibaba/ROLL
           path: ROLL
 
+      - name: Setup Python 3.10 venv
+        run: |
+          python3.10 -m venv vllm-env
+          source vllm-env/bin/activate
+
       - name: Install dependencies
         run: |
           pip install "pybind11>=2.10,<3"
