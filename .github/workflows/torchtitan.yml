@@ -78,13 +78,6 @@ jobs:
           pip install torch torch_npu==2.7.1rc1
           pip install -r https://raw.githubusercontent.com/Ascend/pytorch/refs/heads/master/requirements.txt
 
-      - name: List torch version
-        id: list-torch-version
-        shell: bash
-        run: |
-          torch_version=$(python -c "import torch; print(torch.__version__)")
-          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
-
       - name: Install project dependencies
         run: |
           pip install pytest pytest-cov tyro tabulate tokenizers transformers datasets
