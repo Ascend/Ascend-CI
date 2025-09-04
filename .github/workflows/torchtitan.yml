@@ -37,14 +37,11 @@ defaults:
 jobs:
   setup_environment:
     name: run torchtitan tests
-    runs-on: ${{ inputs.runner }}
-    container:
-      image: ${{ inputs.image }}
+    runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
+    container: 
+      image: ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
       env:
         HF_ENDPOINT: https://hf-mirror.com
-    outputs:
-      torch_version: ${{ steps.get_torch_version.outputs.torch-version }}
-      npu_info: ${{ steps.check_npu.outputs.npu_info }}
     steps:
       - name: Show NPU info
         run: |
