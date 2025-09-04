@@ -1,0 +1,137 @@
+name: "_ascend_npu_torchtitan"
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: true
+        type: string
+        description: "The runner selected to run on"
+      image:
+        required: true
+        type: string
+        description: "The docker image which will be loaded"
+      device:
+        required: true
+        type: string
+        description: "The device selected to run on"
+      torch-artifact:
+        required: false
+        type: string
+        description: "The distribution artifact name of torch"
+      torch-npu-artifact:
+        required: true
+        type: string
+        description: "The distribution artifact name of torch_npu"
+    secrets:
+      pr-token:
+        description: "A token used to create a pull request"
+        required: true
+
+# Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
+# declared as "shell: bash -el {0}" on steps that need to be properly activated.
+# It's used to activate ascend-toolkit environment variables.
+
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  setup_environment:
+    name: run torchtitan tests
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.image }}
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
+    outputs:
+      torch_version: ${{ steps.get_torch_version.outputs.torch-version }}
+      npu_info: ${{ steps.check_npu.outputs.npu_info }}
+    steps:
+      - name: Show NPU info
+        run: |
+          npu-smi info
+
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+              git gcc g++ make cmake ninja-build curl \
+              libgl1 libglib2.0-0 libsndfile1
+
+      - name: Config git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global url."https://gh-proxy.test.osinfra.cn/https://github.com/".insteadOf https://github.com/
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout benchmark
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/torchtitan
+          path: torchtitan
+
+      - name: Download torch artifact
+        if: ${{ inputs.torch-artifact }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.torch-artifact }}
+
+      - name: Install torch
+        if: ${{ inputs.torch-artifact }}
+        run: |
+          pip install ${{ inputs.torch-artifact }}
+
+      - name: Install torch_npu dependencies
+        if: ${{ !inputs.torch-artifact }}
+        run: |
+          pip install -r https://raw.githubusercontent.com/Ascend/pytorch/refs/heads/master/requirements.txt
+
+      - name: List torch version
+        id: list-torch-version
+        shell: bash
+        run: |
+          torch_version=$(python -c "import torch; print(torch.__version__)")
+          echo "torch-version=${torch_version}" >> $GITHUB_OUTPUT
+
+      - name: Download torch_npu artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.torch-npu-artifact }}
+          path: ascend_npu
+
+      - name: Install torch_npu
+        working-directory: ascend_npu
+        run: |
+          pip install ${{ inputs.torch-npu-artifact }}
+
+      - name: Install project dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov tyro
+
+      - name: Show environment info
+        run: |
+          npu_is_available=$(python -c "import torch; print(torch.npu.is_available())")
+          npu_count=$(python -c "import torch; print(torch.npu.device_count())")
+          echo "NPU is available: ${npu_is_available}"
+          echo "NPU count: ${npu_count}"
+          pip list | grep -E 'torch|numpy'
+
+      - name: Run torchtitan integration_test
+        working-directory: torchtitan
+        run: |
+          npu_count=$(python -c "import torch; print(torch.npu.device_count())")
+          python ./tests/integration_tests.py artifacts-to-be-uploaded --ngpu ${npu_count}
+
+      - name: Run torchtitan unittest
+        working-directory: torchtitan
+        run: |
+          pytest ./tests/unit_tests --cov=. --cov-report=xml --durations=20 -vv
