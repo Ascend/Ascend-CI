@@ -75,7 +75,7 @@ jobs:
 
       - name: Install torch_npu dependencies
         run: |
-          pip install torch torch_npu==2.7.1rc1
+          pip install torch torch_npu==2.7.1rc1 torchdata
 
       - name: Install project dependencies
         run: |
