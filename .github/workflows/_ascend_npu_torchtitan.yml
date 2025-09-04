@@ -106,7 +106,7 @@ jobs:
 
       - name: Install project dependencies
         run: |
-          pip install pytest pytest-cov tyro tabulate
+          pip install pytest pytest-cov tyro tabulate tokenizers transformers datasets
 
       - name: Show environment info
         id: check_npu
