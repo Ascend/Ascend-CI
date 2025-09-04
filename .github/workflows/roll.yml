@@ -52,8 +52,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-            git gcc g++ make cmake ninja-build curl python3-dev\
-            libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip
+            git gcc g++ make cmake ninja-build curl \
+            libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
+            python3.10 python3.10-dev python3.10-venv
 
       - name: Checkout
         uses: actions/checkout@v4
