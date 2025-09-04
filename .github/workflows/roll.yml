@@ -97,6 +97,7 @@ jobs:
       - name: Install vllm-ascend
         working-directory: vllm-ascend
         run: |
+          sed -i 's/--cmake/--cmakedir/g' setup.py
           export COMPILE_CUSTOM_KERNELS=1
           pip install -e .
 
