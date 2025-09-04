@@ -79,7 +79,7 @@ jobs:
 
       - name: Install project dependencies
         run: |
-          pip install pytest pytest-cov tyro tabulate tokenizers transformers datasets pyyaml setuptools auditwheel
+          pip install pytest pytest-cov tyro tabulate tokenizers transformers datasets pyyaml setuptools auditwheel tensorboard
 
       - name: Show environment info
         id: check_npu
