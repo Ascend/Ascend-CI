@@ -109,9 +109,11 @@ jobs:
           pip install pytest pytest-cov tyro tabulate
 
       - name: Show environment info
+        id: check_npu
         run: |
           npu_is_available=$(python -c "import torch; print(torch.npu.is_available())")
           npu_count=$(python -c "import torch; print(torch.npu.device_count())")
+          echo "npu_count=${npu_count}" >> $GITHUB_OUTPUT
           echo "NPU is available: ${npu_is_available}"
           echo "NPU count: ${npu_count}"
           pip list | grep -E 'torch|numpy'
@@ -119,10 +121,9 @@ jobs:
       - name: Run torchtitan integration_test
         working-directory: torchtitan
         run: |
-          npu_count=$(python -c "import torch; print(torch.npu.device_count())")
-          python ./tests/integration_tests.py artifacts-to-be-uploaded --ngpu ${npu_count}
-
+          python -m tests.integration_tests.run_tests --test_suite features artifacts-to-be-uploaded --ngpu ${{ steps.check_npu.outputs.npu_count }}
+  
       - name: Run torchtitan unittest
         working-directory: torchtitan
         run: |
-          pytest ./tests/unit_tests --cov=. --cov-report=xml --durations=20 -vv
+          pytest tests/unit_tests --cov=. --cov-report=xml --durations=20 -vv
