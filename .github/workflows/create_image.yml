@@ -3,7 +3,7 @@ name: create_image
 on:
   workflow_dispatch:
     inputs:
-      dockerfile:
+      dockerfilename:
         required: true
         description: "The Dockerfile to build the image"
 
@@ -21,8 +21,17 @@ jobs:
 
       - name: build image
         run: |
-            ImageName=${{ inputs.dockerfile }}
-            docker build -t $ImageName -f docker/$ImageName .
+            InputName="${{ inputs.dockerfilename }}"
+            ImageName=$(echo "$InputName" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
+
+            DockerFile=$(find docker -iname "${InputName}.Dockerfile" | head -n 1)
+            if [ -z "$DockerFile" ]; then
+              echo "❌ No matching Dockerfile found for $InputName"
+              exit 1
+            fi
+            echo "👉 Building image $ImageName from $DockerFile"
+            
+            docker build -t "$ImageName" -f "$DockerFile" .
             docker images | grep $ImageName
             docker run --rm $ImageName npu-smi info
             docker run --rm $ImageName python3 -c "import torch; import torch_npu; print(torch.__version__); print(torch_npu.__version__)"
