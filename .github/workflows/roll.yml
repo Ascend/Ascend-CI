@@ -27,6 +27,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash -el {0}
+
 jobs:
   roll:
     name: Run ROLL with CANN container
@@ -67,7 +71,6 @@ jobs:
           source ~/miniconda3/etc/profile.d/conda.sh
           conda create -n py310 python=3.10 -y
           conda activate py310
-        shell: bash
 
       - name: Checkout
         uses: actions/checkout@v4
