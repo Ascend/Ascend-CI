@@ -21,7 +21,7 @@ jobs:
 
       - name: build image
         run: |
-            ImageName= ${{ inputs.dockerfile }}
+            ImageName=${{ inputs.dockerfile }}
             docker build -t $ImageName -f docker/$ImageName .
             docker images | grep $ImageName
             docker run --rm $ImageName npu-smi info
