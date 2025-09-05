@@ -32,14 +32,14 @@ RUN pip install transformers==4.52.4 huggingface_hub sentencepiece
 
 # Clone and install vLLM (Version 0.8.4) from source
 # VLLM_TARGET_DEVICE=empty is set to avoid device-specific builds at this stage
-RUN git clone --depth=1 --branch=0.10.0 https://github.com/vllm-project/vllm.git && \
+RUN git clone --depth=1 --branch=v0.10.0 https://github.com/vllm-project/vllm.git && \
     cd vllm && \
     VLLM_TARGET_DEVICE=empty pip install -v -e . && \
     cd ..
 
 # Clone and install the Ascend backend for vLLM (Version 0.8.4rc2)
 # COMPILE_CUSTOM_KERNELS=1 is essential for building NPU-specific kernels
-RUN git clone --depth=1 --branch=0.10.0rc1 https://github.com/vllm-project/vllm-ascend.git && \
+RUN git clone --depth=1 --branch=v0.10.0rc1 https://github.com/vllm-project/vllm-ascend.git && \
     cd vllm-ascend && \
     export COMPILE_CUSTOM_KERNELS=1 && \
     pip install -e . && \
