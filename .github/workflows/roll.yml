@@ -59,18 +59,10 @@ jobs:
             git gcc g++ make cmake ninja-build curl wget\
             libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
 
-      - name : Install conda
-        run: |
-          mkdir -p ~/miniconda3
-          wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O ~/miniconda3/miniconda.sh
-          bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-          rm ~/miniconda3/miniconda.sh
-
-      - name : Set up conda
-        run: |
-          source ~/miniconda3/etc/profile.d/conda.sh
-          conda create -n py310 python=3.10 -y
-          conda activate py310
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Checkout
         uses: actions/checkout@v4
