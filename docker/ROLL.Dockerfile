@@ -42,7 +42,9 @@ RUN git clone --depth=1 --branch=v0.10.0 https://github.com/vllm-project/vllm.gi
 RUN git clone --depth=1 --branch=v0.10.0rc1 https://github.com/vllm-project/vllm-ascend.git && \
     cd vllm-ascend && \
     export COMPILE_CUSTOM_KERNELS=1 && \
-    pip install -e . && \
+    grep -v "torch" requirements.txt > requirements_no_torch.txt && \
+    pip install -r requirements_no_torch.txt && \
+    pip install torch==2.7.1 && \
     cd ..
 
 # Clone and install the ROLL framework from Alibaba's repository
