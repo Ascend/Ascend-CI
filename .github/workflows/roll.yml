@@ -113,7 +113,7 @@ jobs:
       - name: Install ROLL
         working-directory: ROLL
         run: |
-          grep -v "torch" requirements.txt > requirements_no_torch.txt && \
+          grep -v "torch" requirements_common.txt > requirements_no_torch.txt && \
             pip install -r requirements_no_torch.txt && \
           pip install deepspeed==0.16.0
 
