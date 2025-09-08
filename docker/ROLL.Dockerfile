@@ -8,6 +8,20 @@ ENV HF_ENDPOINT=https://hf-mirror.com \
 # Set the working directory inside the container
 WORKDIR /workspace
 
+# Replace Ubuntu package sources with Tsinghua Mirror for faster downloads
+# Install essential system dependencies and libraries
+RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list \
+ && apt-get update \
+ && apt-get install -y \
+    git gcc g++ make cmake ninja-build curl wget\
+    libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
+    # Clean up apt cache to reduce image size
+&&  apt-get clean \
+&&  rm -rf /var/lib/apt/lists/*
+
+# Configure pip to use Tsinghua Mirror for faster Python package installation
+RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
 # Install Miniconda for Python package and environment management
 RUN mkdir -p ~/miniconda3 && \
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O ~/miniconda3/miniconda.sh && \
@@ -18,20 +32,6 @@ rm ~/miniconda3/miniconda.sh
 RUN bash ~/miniconda3/etc/profile.d/conda.sh && \
 conda create -n py310 python=3.10 -y && \
 conda activate py310
-
-# Replace Ubuntu package sources with Tsinghua Mirror for faster downloads
-# Install essential system dependencies and libraries
-RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list \
- && apt-get update \
- && apt-get install -y \
-    git gcc g++ make cmake ninja-build curl \
-    libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
-    # Clean up apt cache to reduce image size
-&&  apt-get clean \
-&&  rm -rf /var/lib/apt/lists/*
-
-# Configure pip to use Tsinghua Mirror for faster Python package installation
-RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
 # Install PyTorch (CPU version) and the compatible NPU plugin for Ascend 910B
 # Note: Versions are pinned for compatibility with CANN 8.2.RC1
