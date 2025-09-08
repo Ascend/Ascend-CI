@@ -20,7 +20,8 @@ RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.
 &&  apt-get clean \
 &&  rm -rf /var/lib/apt/lists/*
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 \
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 2 \
+ && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
  && update-alternatives --set python /usr/bin/python3.10 \
  && python --version
 
