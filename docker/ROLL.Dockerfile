@@ -3,7 +3,9 @@ FROM ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
 
 # Set environment variables: use HF mirror for faster downloads
 ENV HF_ENDPOINT=https://hf-mirror.com \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive∂
+
+SHELL ["/bin/bash", "-i", "-c"]
 
 # Set the working directory inside the container
 WORKDIR /workspace
