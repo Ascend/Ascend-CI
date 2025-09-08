@@ -113,7 +113,8 @@ jobs:
       - name: Install ROLL
         working-directory: ROLL
         run: |
-          pip install -r requirements_common.txt
+          grep -v "torch" requirements.txt > requirements_no_torch.txt && \
+            pip install -r requirements_no_torch.txt && \
           pip install deepspeed==0.16.0
 
       - name: Download Qwen2.5 model
