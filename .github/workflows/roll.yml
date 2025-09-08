@@ -121,7 +121,6 @@ jobs:
         working-directory: ROLL
         run: |
           mkdir -p Qwen/Qwen2.5-0.5B-Instruct
-
           huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct \
            --local-dir Qwen/Qwen2.5-0.5B-Instruct
       
