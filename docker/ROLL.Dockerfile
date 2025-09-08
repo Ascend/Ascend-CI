@@ -13,7 +13,7 @@ WORKDIR /workspace
 RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list \
  && apt-get update \
  && apt-get install -y \
-    git gcc g++ make cmake ninja-build wget curk\
+    git gcc g++ make cmake ninja-build wget curl\
     libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
     # Clean up apt cache to reduce image size
 &&  apt-get clean \
