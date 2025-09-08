@@ -9,13 +9,13 @@ ENV HF_ENDPOINT=https://hf-mirror.com \
 WORKDIR /workspace
 
 # Install Miniconda for Python package and environment management
-mkdir -p ~/miniconda3 && \
+RUN mkdir -p ~/miniconda3 && \
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O ~/miniconda3/miniconda.sh && \
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && \
 rm ~/miniconda3/miniconda.sh
 
 # Initialize conda and create a new environment with Python 3.10
-bash ~/miniconda3/etc/profile.d/conda.sh && \
+RUN bash ~/miniconda3/etc/profile.d/conda.sh && \
 conda create -n py310 python=3.10 -y && \
 conda activate py310
 
