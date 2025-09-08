@@ -52,8 +52,8 @@ RUN git clone --depth=1 --branch=v0.10.0rc1 https://github.com/vllm-project/vllm
 # Install its common requirements and the specified version of DeepSpeed
 RUN git clone --depth=1 https://github.com/alibaba/ROLL.git && \
     cd ROLL && \
-    grep -v "torch|peft" requirements_common.txt > requirements_no_torch.txt && \
-    pip install -r requirements_no_torch.txt && \
+    grep -v "peft" requirements_common.txt > requirements_no_peft.txt && \
+    pip install -r requirements_no_peft.txt && \
     pip install deepspeed==0.16.0 peft==0.12.0 --no-deps && \
     cd ..
 
