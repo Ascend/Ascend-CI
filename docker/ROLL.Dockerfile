@@ -22,11 +22,6 @@ RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.
 # Configure pip to use Tsinghua Mirror for faster Python package installation
 RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
-# Install PyTorch (CPU version) and the compatible NPU plugin for Ascend 910B
-# Note: Versions are pinned for compatibility with CANN 8.2.RC1
-RUN pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cpu && \
-    pip install torch_npu==2.7.1rc1
-
 # Install common deep learning and AI development libraries
 RUN pip install transformers==4.52.4 huggingface_hub sentencepiece
 
@@ -55,7 +50,8 @@ RUN git clone --depth=1 https://github.com/alibaba/ROLL.git && \
     cd ROLL && \
     grep -v "torch" requirements_common.txt > requirements_no_torch.txt && \
     pip install -r requirements_no_torch.txt && \
-    pip install deepspeed==0.16.0 && \
+    pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cpu && \
+    pip install torch_npu==2.7.1rc1 deepspeed==0.16.0 && \
     cd ..
 
 # Set the final working directory
