@@ -24,7 +24,7 @@ RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/we
 
 # Install Miniconda for Python package and environment management
 RUN mkdir -p ~/miniconda3 && \
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O ~/miniconda3/miniconda.sh && \
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh && \
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && \
 rm ~/miniconda3/miniconda.sh
 
