@@ -79,7 +79,7 @@ jobs:
           python3 -m pybind11 --cmake
 
           pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cpu
-          pip install torch_npu==2.7.1
+          pip install torch_npu==2.7.1rc1
           pip install transformers==4.52.4 huggingface_hub sentencepiece
 
       - name: Checkout vllm
@@ -124,35 +124,35 @@ jobs:
           huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct \
            --local-dir Qwen/Qwen2.5-0.5B-Instruct
       
-      - name: Run ROLL with lora finetune
-        working-directory: ROLL
-        run: |
-          deepspeed --num_nodes 1 --num_gpus 1 examples/finetune.py \
-            --model_name_or_path ./Qwen/Qwen2.5-0.5B-Instruct \
-            --data_path ./data/alpaca_data.json \
-            --output_dir ./output/roll-qwen2.5-0.5b-instruct-finetuned \
-            --per_device_train_batch_size 1 \
-            --per_device_eval_batch_size 1 \
-            --gradient_accumulation_steps 16 \
-            --evaluation_strategy "steps" \
-            --eval_steps 200 \
-            --save_strategy "steps" \
-            --save_steps 200 \
-            --logging_steps 10 \
-            --learning_rate 2e-4 \
-            --weight_decay 0.01 \
-            --num_train_epochs 1 \
-            --lr_scheduler_type "cosine" \
-            --warmup_steps 100 \
-            --fp16 False \
-            --bf16 True \
-            --deepspeed ./configs/ds_config_zero2.json \
-            --lora_r 8 \
-            --lora_alpha 16 \
-            --lora_dropout 0.05 \
-            --report_to "none" \
-            --load_in_8bit False \
-            --gradient_checkpointing True
+      # - name: Run ROLL with lora finetune
+      #   working-directory: ROLL
+      #   run: |
+      #     deepspeed --num_nodes 1 --num_gpus 1 examples/finetune.py \
+      #       --model_name_or_path ./Qwen/Qwen2.5-0.5B-Instruct \
+      #       --data_path ./data/alpaca_data.json \
+      #       --output_dir ./output/roll-qwen2.5-0.5b-instruct-finetuned \
+      #       --per_device_train_batch_size 1 \
+      #       --per_device_eval_batch_size 1 \
+      #       --gradient_accumulation_steps 16 \
+      #       --evaluation_strategy "steps" \
+      #       --eval_steps 200 \
+      #       --save_strategy "steps" \
+      #       --save_steps 200 \
+      #       --logging_steps 10 \
+      #       --learning_rate 2e-4 \
+      #       --weight_decay 0.01 \
+      #       --num_train_epochs 1 \
+      #       --lr_scheduler_type "cosine" \
+      #       --warmup_steps 100 \
+      #       --fp16 False \
+      #       --bf16 True \
+      #       --deepspeed ./configs/ds_config_zero2.json \
+      #       --lora_r 8 \
+      #       --lora_alpha 16 \
+      #       --lora_dropout 0.05 \
+      #       --report_to "none" \
+      #       --load_in_8bit False \
+      #       --gradient_checkpointing True
 
       - name: Run agentic_pipeline_frozen_lake_single_node_demo
         working-directory: ROLL
