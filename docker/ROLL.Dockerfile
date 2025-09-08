@@ -1,14 +1,25 @@
 # Use the official CANN container image with Python 3.11 on Ubuntu 22.04 for Ascend NPU
 FROM ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
 
-# Set environment variables: use HF mirror for faster downloads in China
+# Set environment variables: use HF mirror for faster downloads
 ENV HF_ENDPOINT=https://hf-mirror.com \
     DEBIAN_FRONTEND=noninteractive
 
 # Set the working directory inside the container
 WORKDIR /workspace
 
-# Replace Ubuntu package sources with Tsinghua Mirror for faster downloads in China
+# Install Miniconda for Python package and environment management
+mkdir -p ~/miniconda3 && \
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O ~/miniconda3/miniconda.sh && \
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && \
+rm ~/miniconda3/miniconda.sh
+
+# Initialize conda and create a new environment with Python 3.10
+bash ~/miniconda3/etc/profile.d/conda.sh && \
+conda create -n py310 python=3.10 -y && \
+conda activate py310
+
+# Replace Ubuntu package sources with Tsinghua Mirror for faster downloads
 # Install essential system dependencies and libraries
 RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list \
  && apt-get update \
@@ -19,7 +30,7 @@ RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.
 &&  apt-get clean \
 &&  rm -rf /var/lib/apt/lists/*
 
-# Configure pip to use Tsinghua Mirror for faster Python package installation in China
+# Configure pip to use Tsinghua Mirror for faster Python package installation
 RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
 # Install PyTorch (CPU version) and the compatible NPU plugin for Ascend 910B
