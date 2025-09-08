@@ -35,7 +35,8 @@ RUN pip install transformers==4.52.4 huggingface_hub sentencepiece
 RUN git clone --depth=1 --branch=v0.10.0 https://github.com/vllm-project/vllm.git && \
     cd vllm && \
     VLLM_TARGET_DEVICE=empty pip install -v -e . && \
-    cd ..
+    cd .. && \
+    rm -rf vllm
 
 # Clone and install the Ascend backend for vLLM (Version 0.8.4rc2)
 # COMPILE_CUSTOM_KERNELS=1 is essential for building NPU-specific kernels
@@ -45,11 +46,12 @@ RUN git clone --depth=1 --branch=v0.10.0rc1 https://github.com/vllm-project/vllm
     grep -v "torch" requirements.txt > requirements_no_torch.txt && \
     pip install -r requirements_no_torch.txt && \
     pip install torch==2.7.1 && \
-    cd ..
+    cd .. && \
+    rm -rf vllm-ascend
 
 # Clone and install the ROLL framework from Alibaba's repository
 # Install its common requirements and the specified version of DeepSpeed
-RUN git clone https://github.com/alibaba/ROLL.git && \
+RUN git clone --depth=1 https://github.com/alibaba/ROLL.git && \
     cd ROLL && \
     grep -v "torch" requirements_common.txt > requirements_no_torch.txt && \
     pip install -r requirements_no_torch.txt && \
