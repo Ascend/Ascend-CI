@@ -36,7 +36,7 @@ jobs:
     name: Run ROLL with CANN container
     runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
     container:
-      image: ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
+      image: ascendai/cann:8.1.RC1-910b-ubuntu22.04-py3.10
       env:
         HF_ENDPOINT: https://hf-mirror.com
 
@@ -58,11 +58,6 @@ jobs:
           apt-get install -y \
             git gcc g++ make cmake ninja-build curl wget\
             libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
-
-      - name: Setup Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
 
       - name: Checkout
         uses: actions/checkout@v4

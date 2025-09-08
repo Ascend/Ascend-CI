@@ -1,5 +1,5 @@
 # Use the official CANN container image with Python 3.11 on Ubuntu 22.04 for Ascend NPU
-FROM ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11
+FROM ascendai/cann:8.1.RC1-910b-ubuntu22.04-py3.10
 
 # Set environment variables: use HF mirror for faster downloads
 ENV HF_ENDPOINT=https://hf-mirror.com \
@@ -15,14 +15,9 @@ RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.
  && apt-get install -y \
     git gcc g++ make cmake ninja-build wget curk\
     libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
-    python3.10 python3.10-distutils python3.10-venv \
-    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 \
     # Clean up apt cache to reduce image size
 &&  apt-get clean \
 &&  rm -rf /var/lib/apt/lists/*
-
-RUN ln -sf /usr/bin/python3.10 /usr/bin/python \
- && python --version
 
 # Configure pip to use Tsinghua Mirror for faster Python package installation
 RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
