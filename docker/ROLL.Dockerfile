@@ -20,7 +20,7 @@ RUN sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.
 &&  apt-get clean \
 &&  rm -rf /var/lib/apt/lists/*
 
-RUN RUN ln -sf /usr/bin/python3.10 /usr/bin/python \
+RUN ln -sf /usr/bin/python3.10 /usr/bin/python \
  && python --version
 
 # Configure pip to use Tsinghua Mirror for faster Python package installation
