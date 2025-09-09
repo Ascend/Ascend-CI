@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build:
     name: Build image
-    runs-on: ubuntu-24.04
+    runs-on: linux-arm64-npu-1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
