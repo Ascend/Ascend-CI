@@ -53,7 +53,7 @@ RUN git clone --depth=1 --branch=v0.10.0rc1 https://github.com/vllm-project/vllm
 RUN git clone --depth=1 https://github.com/alibaba/ROLL.git && \
     cd ROLL && \
     grep -v "sympy" requirements_common.txt > temp.txt && cat temp.txt && \
-    pip install -r temp.txt torch==2.7.1+cpu && \
+    pip install -r temp.txt torch==2.7.1+cpu --extra-index-url https://download.pytorch.org/whl/cpu && \
     pip install deepspeed==0.16.0 && \
     cd ..
 
