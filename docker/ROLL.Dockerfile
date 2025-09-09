@@ -43,7 +43,7 @@ RUN git clone --depth=1 --branch=v0.10.0 https://github.com/vllm-project/vllm.gi
 RUN git clone --depth=1 --branch=v0.10.0rc1 https://github.com/vllm-project/vllm-ascend.git && \
     cd vllm-ascend && \
     export COMPILE_CUSTOM_KERNELS=1 && \
-    grep -v "torch" requirements.txt > requirements_no_torch.txt && \
+    grep -v "torch" requirements.txt > requirements_no_torch.txt && cat requirements_no_torch.txt && \
     pip install -r requirements_no_torch.txt && \
     cd .. && \
     rm -rf vllm-ascend
@@ -52,7 +52,7 @@ RUN git clone --depth=1 --branch=v0.10.0rc1 https://github.com/vllm-project/vllm
 # Install its common requirements and the specified version of DeepSpeed
 RUN git clone --depth=1 https://github.com/alibaba/ROLL.git && \
     cd ROLL && \
-    grep -v "peft" requirements_common.txt > requirements_no_peft.txt && \
+    grep -v "peft" requirements_common.txt > requirements_no_peft.txt && cat requirements_no_peft.txt && \
     pip install -r requirements_no_peft.txt && \
     pip install deepspeed==0.16.0 peft==0.12.0 --no-deps && \
     cd ..
