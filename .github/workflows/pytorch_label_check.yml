@@ -55,11 +55,9 @@ jobs:
             echo "$prs" > prs.json
             cat prs.json
 
-            # 过滤出包含指定标签的 PR
             matched=$(jq '[.[] | select(.labels[]?.name=="oncall: distributed")]' prs.json)
             echo "$matched" > matched.json
 
-            # 计算匹配的 PR 数量
             count=$(jq 'length' matched.json)
             echo "found=$count" >> $GITHUB_OUTPUT
 
