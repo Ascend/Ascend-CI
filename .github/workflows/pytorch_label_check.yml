@@ -81,7 +81,7 @@ jobs:
       image: ${{ needs.prepare.outputs.image }}
     strategy:
       matrix:
-        pr_number: ${{ fromJson(needs.prepare.outputs.pr_numbers) }}   # Using the matrix for parallel execution
+        pr_number: ${{ fromJson(needs.prepare.outputs.pr_numbers) }}
     steps:
       - name: Checkout code for PR
         uses: actions/checkout@v4
