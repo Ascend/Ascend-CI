@@ -1,0 +1,108 @@
+name: PyTorch Label Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: "linux-arm64-npu-1"
+        description: "The runner selected to run on"
+
+  pull_request:
+    branches:
+      - "roll"
+    paths:
+      - ".github/workflows/pytorch_label_check.yml"
+  push:
+    branches:
+      - "roll"
+    paths:
+      - ".github/workflows/pytorch_label_check.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    environment: Ascend
+    outputs:
+      runner: ${{ steps.set.outputs.runner }}
+      images: ${{ steps.set.outputs.images }}
+    steps:
+      - name: Set outputs
+        id: set
+        run: |  
+          runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
+          echo "runner=${runner}" >> $GITHUB_OUTPUT
+          echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11"]'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get open PRs from B repo
+        id: get_prs
+        run: |
+            prs=$(curl -s -H "Authorization: token ${{ secrets.COSDT_BOT_TOKEN }}" \
+            https://api.github.com/repos/pytorch/pytorch/pulls?state=open)
+            echo "$prs" > prs.json
+            cat prs.json
+
+            # 过滤出包含指定标签的 PR
+            matched=$(jq '[.[] | select(.labels[]?.name=="oncall: distributed")]' prs.json)
+            echo "$matched" > matched.json
+
+            # 计算匹配的 PR 数量
+            count=$(jq 'length' matched.json)
+            echo "found=$count" >> $GITHUB_OUTPUT
+
+      - name: Show matched PRs
+        if: steps.get_prs.outputs.found != '0'
+        run: cat matched.json
+
+      - name: Set matrix for parallel PR checkout
+        id: set-matrix
+        run: |
+            pr_numbers=$(jq -r '.[] | .number' matched.json)
+            matrix_prs=$(echo $pr_numbers | sed 's/ /,/g')  # Convert PR numbers to a comma-separated list
+            echo "matrix_prs=$matrix_prs" >> $GITHUB_ENV
+
+  # Define a separate job for each PR number
+  check_pr:
+    needs: prepare
+    runs-on:  ${{ needs.prepare.outputs.runner }}
+    container:
+      image: ${{ needs.prepare.outputs.image }}
+    strategy:
+      matrix:
+        pr_number: [${{ env.matrix_prs }}]  # Using the matrix for parallel execution
+    steps:
+      - name: Checkout code for PR
+        uses: actions/checkout@v4
+
+      - name: Checkout PR branch
+        run: |
+            # Get the PR details
+            pr_number=${{ matrix.pr_number }}
+            head_repo=$(jq -r ".[] | select(.number==$pr_number) | .head.repo.full_name" matched.json)
+            head_ref=$(jq -r ".[] | select(.number==$pr_number) | .head.ref" matched.json)
+
+            echo "Checking out PR #$pr_number from $head_repo ($head_ref)"
+            
+            # Clone the PR's branch
+            git clone --depth=1 --branch "$head_ref" \
+            "https://github.com/$head_repo.git" pr-code-$pr_number
+            ls -al pr-code-$pr_number
+
+            # Perform further operations on the PR's code (e.g., testing)
+            cd pr-code-$pr_number
+            # Example test or action
+            echo "Running tests for PR #$pr_number"
+            # test_command
+            cd ..
