@@ -57,7 +57,6 @@ jobs:
 
             matched=$(jq '[.[] | select(.labels[]?.name=="oncall: distributed")]' prs.json)
             echo "$matched" > matched.json
-            echo "matchedPRs=$matched" >> $GITHUB_OUTPUT
 
             count=$(jq 'length' matched.json)
             echo "found=$count" >> $GITHUB_OUTPUT
