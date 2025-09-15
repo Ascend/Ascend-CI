@@ -78,7 +78,7 @@ jobs:
     needs: prepare
     runs-on:  ${{ needs.prepare.outputs.runner }}
     container:
-      image: ${{ needs.prepare.outputs.image }}
+      image: ${{ needs.prepare.outputs.images }}
     strategy:
       matrix:
         pr_number: ${{ fromJson(needs.prepare.outputs.pr_numbers) }}
