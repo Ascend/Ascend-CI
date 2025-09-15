@@ -69,12 +69,11 @@ jobs:
         id: set_matrix
         run: |
             pr_numbers=$(jq -r '.[] | .number' matched.json)
-            matrix_prs=$(echo $pr_numbers | sed 's/ /,/g')  # Convert PR numbers to a comma-separated list
-            matrix_prs=$(jq '[.[].number]' matched.json)
+            matrix_prs=$(jq -r '.[].number' matched.json | jq -s -c '.')
             echo "found_prs=$pr_numbers"
             echo "matrix_prs=$matrix_prs"
             echo "matrix_prs=$matrix_prs" >> $GITHUB_ENV
-            echo "pr_numbers=$matrix_prs" >> $GITHUB_OUTPUT  # Output the variable for later use
+            echo "pr_numbers=$matrix_prs" >> $GITHUB_OUTPUT
 
   # Define a separate job for each PR number
   check_pr:
