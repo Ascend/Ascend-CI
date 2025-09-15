@@ -36,7 +36,6 @@ jobs:
       runner: ${{ steps.set.outputs.runner }}
       images: ${{ steps.set.outputs.images }}
       pr_numbers: ${{ steps.set_matrix.outputs.pr_numbers }}
-      matchedPRs: ${{ steps.get_prs.outputs.matchedPRs }}
     steps:
       - name: Set outputs
         id: set
@@ -74,6 +73,13 @@ jobs:
             echo "matrix_prs=$matrix_prs" >> $GITHUB_ENV
             echo "pr_numbers=$matrix_prs" >> $GITHUB_OUTPUT
 
+      - name: Upload matched.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: matched
+          path: matched.json
+          
+
   # Define a separate job for each PR number
   check_pr:
     needs: prepare
@@ -87,12 +93,17 @@ jobs:
       - name: Checkout code for PR
         uses: actions/checkout@v4
 
+      - name: Download matched.json
+        uses: actions/download-artifact@v4
+        with:
+          name: matched
+
       - name: Checkout PR branch
         run: |
             # Get the PR details
             pr_number=${{ matrix.pr_number }}
-            head_repo=$(jq -r ".[] | select(.number==$pr_number) | .head.repo.full_name" ${{ needs.prepare.outputs.matchedPRs }})
-            head_ref=$(jq -r ".[] | select(.number==$pr_number) | .head.ref" ${{ needs.prepare.outputs.matchedPRs }})
+            head_repo=$(jq -r ".[] | select(.number==$pr_number) | .head.repo.full_name" matched.json)
+            head_ref=$(jq -r ".[] | select(.number==$pr_number) | .head.ref" matched.json)
 
             echo "Checking out PR #$pr_number from $head_repo ($head_ref)"
             
