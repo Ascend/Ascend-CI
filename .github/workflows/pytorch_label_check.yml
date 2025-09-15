@@ -36,6 +36,7 @@ jobs:
       runner: ${{ steps.set.outputs.runner }}
       images: ${{ steps.set.outputs.images }}
       pr_numbers: ${{ steps.set_matrix.outputs.pr_numbers }}
+      matchedPRs: ${{ steps.get_prs.outputs.matchedPRs }}
     steps:
       - name: Set outputs
         id: set
@@ -57,6 +58,7 @@ jobs:
 
             matched=$(jq '[.[] | select(.labels[]?.name=="oncall: distributed")]' prs.json)
             echo "$matched" > matched.json
+            echo "matchedPRs=$matched" >> $GITHUB_OUTPUT
 
             count=$(jq 'length' matched.json)
             echo "found=$count" >> $GITHUB_OUTPUT
@@ -68,10 +70,7 @@ jobs:
       - name: Set matrix for parallel PR checkout
         id: set_matrix
         run: |
-            pr_numbers=$(jq -r '.[] | .number' matched.json)
             matrix_prs=$(jq -r '.[].number' matched.json | jq -s -c '.')
-            echo "found_prs=$pr_numbers"
-            echo "matrix_prs=$matrix_prs"
             echo "matrix_prs=$matrix_prs" >> $GITHUB_ENV
             echo "pr_numbers=$matrix_prs" >> $GITHUB_OUTPUT
 
@@ -92,8 +91,8 @@ jobs:
         run: |
             # Get the PR details
             pr_number=${{ matrix.pr_number }}
-            head_repo=$(jq -r ".[] | select(.number==$pr_number) | .head.repo.full_name" matched.json)
-            head_ref=$(jq -r ".[] | select(.number==$pr_number) | .head.ref" matched.json)
+            head_repo=$(jq -r ".[] | select(.number==$pr_number) | .head.repo.full_name" ${{ needs.prepare.outputs.matchedPRs }})
+            head_ref=$(jq -r ".[] | select(.number==$pr_number) | .head.ref" ${{ needs.prepare.outputs.matchedPRs }})
 
             echo "Checking out PR #$pr_number from $head_repo ($head_ref)"
             
