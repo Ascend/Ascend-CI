@@ -113,7 +113,21 @@ jobs:
 
             # Perform further operations on the PR's code (e.g., testing)
             cd pr-code-$pr_number
-            # Example test or action
-            echo "Running tests for PR #$pr_number"
+
+            # Install dependencies
+            python -mpip install -r requirements.txt
+
+            # enable debug asserts in serialization
+            export TORCH_SERIALIZATION_DEBUG=1
+
+            python -mpip install --no-input -r requirements.txt
+
+            pip install torch_npu==2.6.0 torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+            echo "Ninja version: $(ninja --version)"
+            echo "Python version: $(which python) ($(python --version))"
+
+            time python test/run_test.py --verbose --exclude-jit-executor
+
             # test_command
             cd ..
