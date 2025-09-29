@@ -16,14 +16,7 @@ jobs:
     steps:
       - id: get_tag
         run: |
-          pypi_tag=$(python3 - <<'EOF'
-          import urllib.request, json
-          url = "https://pypi.org/pypi/onnxruntime-cann/json"
-          with urllib.request.urlopen(url) as resp:
-              data = json.load(resp)
-          print("v" + data["info"]["version"])
-          EOF
-          )
+          pypi_tag="1.22.0"
 
           echo "last_tag=$pypi_tag" >> $GITHUB_OUTPUT
 
@@ -72,6 +65,10 @@ jobs:
             image: bachelor233/manylinux2_28-py310-cann8_1_x86_64
             build_name: x86_64-py310-cann8.1
 
+          - arch: aarch
+            runner: pypi-aarch
+            image: bachelor233/manylinux2_28-py310-cann8_1_aarch
+            build_name: aarch64-py310-cann8.1
 
           - arch: x86_64
             runner: ONNXRuntime
