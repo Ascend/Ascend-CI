@@ -16,9 +16,17 @@ jobs:
     steps:
       - id: get_tag
         run: |
-          pypi_tag="1.22.0"
+          pypi_tag=$(python3 - <<'EOF'
+          import urllib.request, json
+          url = "https://pypi.org/pypi/onnxruntime-cann/json"
+          with urllib.request.urlopen(url) as resp:
+              data = json.load(resp)
+          print("v" + data["info"]["version"])
+          EOF
+          )
 
           echo "last_tag=$pypi_tag" >> $GITHUB_OUTPUT
+
 
       - id: get_latest_tag
         run: |
@@ -28,6 +36,7 @@ jobs:
           LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | \
                       grep '"name":' | head -n 1 | cut -d '"' -f 4)
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
 
       - id: compare_tags
         run: |
