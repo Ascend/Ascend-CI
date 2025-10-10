@@ -39,7 +39,10 @@ build_and_upload() {
   fi
 
   cd onnxruntime
-
+  git fetch upstream pull/25627/head:pr-123
+  git checkout main
+  git cherry-pick pr-123
+  
   ./build.sh --allow_running_as_root \
              --config Release \
              --build_shared_lib \
