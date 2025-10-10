@@ -39,9 +39,7 @@ build_and_upload() {
   fi
 
   cd onnxruntime
-  git fetch https://github.com/microsoft/onnxruntime.git pull/25627/head:pr-123
-  git branch -a
-  git checkout main
+  git fetch "$REPO_URL" pull/25627/head:pr-123
   git cherry-pick pr-123
   
   ./build.sh --allow_running_as_root \
