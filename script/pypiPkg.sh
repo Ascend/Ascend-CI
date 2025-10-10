@@ -40,6 +40,7 @@ build_and_upload() {
 
   cd onnxruntime
   git fetch https://github.com/microsoft/onnxruntime.git pull/25627/head:pr-123
+  git branch -a
   git checkout main
   git cherry-pick pr-123
   
