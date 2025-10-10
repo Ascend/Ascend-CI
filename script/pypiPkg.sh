@@ -39,7 +39,7 @@ build_and_upload() {
   fi
 
   cd onnxruntime
-  git fetch upstream pull/25627/head:pr-123
+  git fetch https://github.com/microsoft/onnxruntime.git pull/25627/head:pr-123
   git checkout main
   git cherry-pick pr-123
   
