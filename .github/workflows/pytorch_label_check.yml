@@ -67,7 +67,7 @@ jobs:
       - name: Set matrix for parallel PR checkout
         id: set_matrix
         run: |
-            matrix_prs=$(jq -r '.[].number' matched.json | jq -s -c '.')
+            matrix_prs=$(jq -r '.items[].number' matched.json | jq -s -c '.')
             echo "matrix_prs=$matrix_prs" >> $GITHUB_ENV
             echo "pr_numbers=$matrix_prs" >> $GITHUB_OUTPUT
 
