@@ -50,13 +50,15 @@ jobs:
       - name: Get open PRs from B repo
         id: get_prs
         run: |
-            prs=$(curl -s -H "Authorization: token ${{ secrets.COSDT_BOT_TOKEN }}" \
-              "https://api.github.com/search/issues?q=is:pr+is:open+repo:pytorch/pytorch+label:\"module: PrivateUse1\"")
+            prs=$(curl -s -H "Authorization: token $TOKEN" \
+              "https://api.github.com/search/issues?q=is:pr+is:open+repo:pytorch/pytorch+label:\"module:%20PrivateUse1\"")
             echo "$prs" > matched.json
             cat matched.json
 
             count=$(jq 'length' matched.json)
             echo "found=$count" >> $GITHUB_OUTPUT
+        env:
+          TOKEN: ${{ secrets.COSDT_BOT_TOKEN }}
 
       - name: Show matched PRs
         if: steps.get_prs.outputs.found != '0'
