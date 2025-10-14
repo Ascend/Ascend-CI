@@ -55,7 +55,7 @@ jobs:
             echo "$prs" > prs.json
             cat prs.json
 
-            matched=$(jq '[.[] | select(.labels[]?.name=="oncall: distributed")]' prs.json)
+            matched=$(jq '[.[] | select(.labels[]?.name=="module: PrivateUse1")]' prs.json)
             echo "$matched" > matched.json
 
             count=$(jq 'length' matched.json)
