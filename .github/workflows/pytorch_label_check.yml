@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Set outputs
         id: set
-        run: |  
+        run: |
           runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
           echo "runner=${runner}" >> $GITHUB_OUTPUT
           echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11"]'
@@ -76,7 +76,7 @@ jobs:
         with:
           name: matched
           path: matched.json
-          
+
 
   # Define a separate job for each PR number
   check_pr:
@@ -104,15 +104,16 @@ jobs:
             head_ref=$(jq -r ".[] | select(.number==$pr_number) | .head.ref" matched.json)
 
             echo "Checking out PR #$pr_number from $head_repo ($head_ref)"
-            
+
             # Clone the PR's branch
             git clone --depth=1 --branch "$head_ref" \
             "https://github.com/$head_repo.git" pr-code-$pr_number
             ls -al pr-code-$pr_number
 
-            # Perform further operations on the PR's code (e.g., testing)
-            cd pr-code-$pr_number
-
+      - name: Test PR code
+        id: build
+        working-directory: pr-code-${{ matrix.pr_number }}
+        run: |
             # Install dependencies
             python -mpip install -r requirements.txt
 
@@ -126,7 +127,20 @@ jobs:
             echo "Ninja version: $(ninja --version)"
             echo "Python version: $(which python) ($(python --version))"
 
-            time python test/run_test.py --verbose --exclude-jit-executor
+            python test/run_test.py --verbose --exclude-jit-executor
+        continue-on-error: true
+      
+      - name: Create GitHub Issue on Failure
+        if: steps.build.outcome == 'failure'
+        uses: JasonEtco/create-an-issue@v2
+        with:
+          token: ${{ secrets.COSDT_BOT_TOKEN }}
+          title: Build Failed in Workflow ${{ github.workflow }}
+          body: |
+            The build failed. Please investigate.
 
-            # test_command
-            cd ..
+            - **Workflow**: `${{ github.workflow }}`
+            - **Job**: `${{ github.job }}`
+            - **Commit**: `${{ github.sha }}`
+            - **Triggered by**: `${{ github.actor }}`
+            - **Logs**: [Click here to see the logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
