@@ -1,0 +1,146 @@
+name: PyTorch Label Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: "linux-arm64-npu-1"
+        description: "The runner selected to run on"
+
+  pull_request:
+    branches:
+      - "roll"
+    paths:
+      - ".github/workflows/pytorch_label_check.yml"
+  push:
+    branches:
+      - "roll"
+    paths:
+      - ".github/workflows/pytorch_label_check.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    environment: Ascend
+    outputs:
+      runner: ${{ steps.set.outputs.runner }}
+      images: ${{ steps.set.outputs.images }}
+      pr_numbers: ${{ steps.set_matrix.outputs.pr_numbers }}
+    steps:
+      - name: Set outputs
+        id: set
+        run: |
+          runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
+          echo "runner=${runner}" >> $GITHUB_OUTPUT
+          echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11"]'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get open PRs from B repo
+        id: get_prs
+        run: |
+            prs=$(curl -s -H "Authorization: token $TOKEN" \
+              "https://api.github.com/search/issues?q=is:pr+is:open+repo:pytorch/pytorch+label:\"module:%20PrivateUse1\"")
+            echo "$prs" > matched.json
+            cat matched.json
+
+            count=$(jq 'length' matched.json)
+            echo "found=$count" >> $GITHUB_OUTPUT
+        env:
+          TOKEN: ${{ secrets.COSDT_BOT_TOKEN }}
+
+      - name: Show matched PRs
+        if: steps.get_prs.outputs.found != '0'
+        run: cat matched.json
+
+      - name: Set matrix for parallel PR checkout
+        id: set_matrix
+        run: |
+            matrix_prs=$(jq -r '.items[].number' matched.json | jq -s -c '.')
+            echo "matrix_prs=$matrix_prs" >> $GITHUB_ENV
+            echo "pr_numbers=$matrix_prs" >> $GITHUB_OUTPUT
+
+      - name: Upload matched.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: matched
+          path: matched.json
+
+
+  # Define a separate job for each PR number
+  check_pr:
+    needs: prepare
+    runs-on:  ${{ needs.prepare.outputs.runner }}
+    container:
+      image: ${{ needs.prepare.outputs.images }}
+    strategy:
+      matrix:
+        pr_number: ${{ fromJson(needs.prepare.outputs.pr_numbers) }}
+    steps:
+      - name: Checkout code for PR
+        uses: actions/checkout@v4
+
+      - name: Download matched.json
+        uses: actions/download-artifact@v4
+        with:
+          name: matched
+
+      - name: Checkout PR branch
+        run: |
+            # Get the PR details
+            pr_number=${{ matrix.pr_number }}
+            head_repo=$(jq -r ".[] | select(.number==$pr_number) | .head.repo.full_name" matched.json)
+            head_ref=$(jq -r ".[] | select(.number==$pr_number) | .head.ref" matched.json)
+
+            echo "Checking out PR #$pr_number from $head_repo ($head_ref)"
+
+            # Clone the PR's branch
+            git clone --depth=1 --branch "$head_ref" \
+            "https://github.com/$head_repo.git" pr-code-$pr_number
+            ls -al pr-code-$pr_number
+
+      - name: Test PR code
+        id: build
+        working-directory: pr-code-${{ matrix.pr_number }}
+        run: |
+            # Install dependencies
+            python -mpip install -r requirements.txt
+
+            # enable debug asserts in serialization
+            export TORCH_SERIALIZATION_DEBUG=1
+
+            python -mpip install --no-input -r requirements.txt
+
+            pip install torch_npu==2.6.0 torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+            echo "Ninja version: $(ninja --version)"
+            echo "Python version: $(which python) ($(python --version))"
+
+            python test/run_test.py --verbose --exclude-jit-executor
+        continue-on-error: true
+      
+      - name: Create GitHub Issue on Failure
+        if: steps.build.outcome == 'failure'
+        uses: JasonEtco/create-an-issue@v2
+        with:
+          token: ${{ secrets.COSDT_BOT_TOKEN }}
+          title: Build Failed in Workflow ${{ github.workflow }}
+          body: |
+            The build failed. Please investigate.
+
+            - **Workflow**: `${{ github.workflow }}`
+            - **Job**: `${{ github.job }}`
+            - **Commit**: `${{ github.sha }}`
+            - **Triggered by**: `${{ github.actor }}`
+            - **Logs**: [Click here to see the logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})

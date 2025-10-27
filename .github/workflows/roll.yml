@@ -1,0 +1,161 @@
+name: Roll test
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: linux-arm64-npu-1
+        description: "The runner selected to run on"
+  push:
+    branches:
+      - roll
+    paths:
+      - '.github/workflows/roll.yml'
+  pull_request:
+    branches:
+      - roll
+    paths:
+      - '.github/workflows/roll.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  roll:
+    name: Run ROLL with CANN container
+    runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
+    container:
+      image: ascendai/cann:8.1.RC1-910b-ubuntu22.04-py3.10
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
+
+    steps:
+      - name: Show NPU info
+        run: |
+          npu-smi info
+          echo $ASCEND_HOME
+          echo $LD_LIBRARY_PATH | grep Ascend 
+
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            git gcc g++ make cmake ninja-build curl wget\
+            libgl1 libglib2.0-0 libsndfile1 libcurl4-openssl-dev unzip \
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout ROLL
+        uses: actions/checkout@v4
+        with:
+          repository: alibaba/ROLL
+          path: ROLL
+
+      - name: Install dependencies
+        run: |
+          pip install "pybind11>=2.10,<3"
+          python3 -m pybind11 --cmake
+
+          pip install transformers==4.52.4 huggingface_hub sentencepiece
+
+      - name: Checkout vllm
+        uses: actions/checkout@v4
+        with:
+          repository: vllm-project/vllm
+          fetch-depth: 0
+          ref: refs/tags/v0.8.4
+          path: vllm
+
+      - name: Checkout vllm-ascend
+        uses: actions/checkout@v4
+        with:
+          repository: vllm-project/vllm-ascend
+          fetch-depth: 0
+          ref: refs/tags/v0.8.4rc2
+          path: vllm-ascend
+
+      - name: Install vllm
+        working-directory: vllm
+        run: |
+          VLLM_TARGET_DEVICE=empty pip install -v -e .
+
+      - name: Install vllm-ascend
+        working-directory: vllm-ascend
+        run: |
+          sed -i 's/--cmake/--cmakedir/g' setup.py
+          export COMPILE_CUSTOM_KERNELS=1
+          pip install -e .
+
+      - name: Install ROLL
+        working-directory: ROLL
+        run: |
+          grep -v "torch" requirements_common.txt > requirements_no_torch.txt && \
+            pip install -r requirements_no_torch.txt && \
+            pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cpu && \
+            pip install torch_npu==2.6.0 && \
+          pip install deepspeed==0.16.0
+
+      - name: Download Qwen2.5 model
+        working-directory: ROLL
+        run: |
+          mkdir -p Qwen/Qwen2.5-0.5B-Instruct
+          huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct \
+           --local-dir Qwen/Qwen2.5-0.5B-Instruct
+      
+      # - name: Run ROLL with lora finetune
+      #   working-directory: ROLL
+      #   run: |
+      #     deepspeed --num_nodes 1 --num_gpus 1 examples/finetune.py \
+      #       --model_name_or_path ./Qwen/Qwen2.5-0.5B-Instruct \
+      #       --data_path ./data/alpaca_data.json \
+      #       --output_dir ./output/roll-qwen2.5-0.5b-instruct-finetuned \
+      #       --per_device_train_batch_size 1 \
+      #       --per_device_eval_batch_size 1 \
+      #       --gradient_accumulation_steps 16 \
+      #       --evaluation_strategy "steps" \
+      #       --eval_steps 200 \
+      #       --save_strategy "steps" \
+      #       --save_steps 200 \
+      #       --logging_steps 10 \
+      #       --learning_rate 2e-4 \
+      #       --weight_decay 0.01 \
+      #       --num_train_epochs 1 \
+      #       --lr_scheduler_type "cosine" \
+      #       --warmup_steps 100 \
+      #       --fp16 False \
+      #       --bf16 True \
+      #       --deepspeed ./configs/ds_config_zero2.json \
+      #       --lora_r 8 \
+      #       --lora_alpha 16 \
+      #       --lora_dropout 0.05 \
+      #       --report_to "none" \
+      #       --load_in_8bit False \
+      #       --gradient_checkpointing True
+
+      - name: Run agentic_pipeline_frozen_lake_single_node_demo
+        working-directory: ROLL
+        run: |
+          python examples/agentic_pipeline_frozen_lake_single_node_demo.py
+            --model_name_or_path ./Qwen/Qwen2.5-0.5B-Instruct
+            --lora_path ./output/roll-qwen2.5-0.5b-instruct-finetuned
+            --num_episodes 3
+            --max_steps_per_episode 10
+            --bf16 True
+            --seed 42

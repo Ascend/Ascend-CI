@@ -3,9 +3,21 @@ name: create_image
 on:
   workflow_dispatch:
     inputs:
-      dockerfile:
+      dockerfilename:
         required: true
         description: "The Dockerfile to build the image"
+      runner:
+        required: true
+        description: "The runner to run on"
+        default: "ubuntu-24.04"
+        type: choice
+        options:
+          - ubuntu-24.04
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+          - linux-aarch64-310p-1
+          - linux-aarch64-310p-2
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,15 +26,24 @@ concurrency:
 jobs:
   build:
     name: Build image
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }} || ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: build image
         run: |
-            ImageName= ${{ inputs.dockerfile }}
-            docker build -t $ImageName -f docker/$ImageName .
+            InputName="${{ inputs.dockerfilename }}"
+            ImageName=$(echo "$InputName" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
+
+            DockerFile=$(find docker -iname "${InputName}.Dockerfile" | head -n 1)
+            if [ -z "$DockerFile" ]; then
+              echo "❌ No matching Dockerfile found for $InputName"
+              exit 1
+            fi
+            echo "👉 Building image $ImageName from $DockerFile"
+            
+            docker build -t "$ImageName" -f "$DockerFile" .
             docker images | grep $ImageName
             docker run --rm $ImageName npu-smi info
             docker run --rm $ImageName python3 -c "import torch; import torch_npu; print(torch.__version__); print(torch_npu.__version__)"
