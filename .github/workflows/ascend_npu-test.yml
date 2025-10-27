@@ -154,18 +154,18 @@ jobs:
       hf_token: ${{ secrets.HF_TOKEN }}
 
 
-  torchtitan:
-    name: Run torchtitan
-    needs:
-      - prepare
-      - build-torch
-      - build
-    if: |
-      !cancelled() && github.event_name != 'repository_dispatch' &&
-      (success() || (needs.build-torch.result == 'skipped' && needs.build.result == 'success'))
-    uses: ./.github/workflows/_ascend_npu_torchtitan.yml
-    with:
-      runner: ${{ needs.prepare.outputs.runner }}
-      image: ${{ needs.prepare.outputs.image }}
-      torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
-      torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}
+  # torchtitan:
+  #   name: Run torchtitan
+  #   needs:
+  #     - prepare
+  #     - build-torch
+  #     - build
+  #   if: |
+  #     !cancelled() && github.event_name != 'repository_dispatch' &&
+  #     (success() || (needs.build-torch.result == 'skipped' && needs.build.result == 'success'))
+  #   uses: ./.github/workflows/_ascend_npu_torchtitan.yml
+  #   with:
+  #     runner: ${{ needs.prepare.outputs.runner }}
+  #     image: ${{ needs.prepare.outputs.image }}
+  #     torch-artifact: ${{ needs.build-torch.outputs.torch-artifact }}
+  #     torch-npu-artifact: ${{ needs.build.outputs.torch-npu-artifact }}

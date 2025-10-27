@@ -27,6 +27,7 @@ jobs:
 
           echo "last_tag=$pypi_tag" >> $GITHUB_OUTPUT
 
+
       - id: get_latest_tag
         run: |
           REPO="microsoft/onnxruntime"
@@ -35,6 +36,7 @@ jobs:
           LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | \
                       grep '"name":' | head -n 1 | cut -d '"' -f 4)
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
 
       - id: compare_tags
         run: |
