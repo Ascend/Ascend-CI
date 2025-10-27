@@ -6,7 +6,55 @@ on:
     - cron: '0 11 * * 0'
 
 jobs:
+  check:
+    runs-on: self-hosted
+    outputs:
+      last_tag: ${{ steps.get_tag.outputs.last_tag }}
+      latest_tag: ${{ steps.get_latest_tag.outputs.latest_tag }}
+      skip_build: ${{ steps.compare_tags.outputs.skip_build }}
+
+    steps:
+      - id: get_tag
+        run: |
+          pypi_tag=$(python3 - <<'EOF'
+          import urllib.request, json
+          url = "https://pypi.org/pypi/onnxruntime-cann/json"
+          with urllib.request.urlopen(url) as resp:
+              data = json.load(resp)
+          print("v" + data["info"]["version"])
+          EOF
+          )
+
+          echo "last_tag=$pypi_tag" >> $GITHUB_OUTPUT
+
+      - id: get_latest_tag
+        run: |
+          REPO="microsoft/onnxruntime"
+          API="https://api.github.com/repos/$REPO/tags"
+
+          LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | \
+                      grep '"name":' | head -n 1 | cut -d '"' -f 4)
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+      - id: compare_tags
+        run: |
+          GITHUB_TAG=${{ steps.get_latest_tag.outputs.latest_tag }}
+          PYPI_TAG=${{ steps.get_tag.outputs.last_tag }}
+
+          echo "GitHub latest: $GITHUB_TAG"
+          echo "PyPI latest: $PYPI_TAG"
+
+          if [ "$GITHUB_TAG" = "$PYPI_TAG" ]; then
+            echo "No new tag detected. Skipping build."
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "New tag detected: $GITHUB_TAG"
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: check
+    if: needs.check.outputs.skip_build == 'false'
     name: Build for ${{ matrix.build_name }}
     runs-on: ${{ matrix.runner }}
     container:
@@ -15,7 +63,6 @@ jobs:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       volumes:
         - ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI
-        - /home/last_tag.txt:/root/last_tag.txt
 
     strategy:
       matrix:
@@ -51,4 +98,5 @@ jobs:
         working-directory: /root/Ascend-CI
         run: |
           chmod +x ./script/pypiPkg.sh
-          ./script/pypiPkg.sh
+          ./script/pypiPkg.sh \
+            ${{ needs.check.outputs.latest_tag }}
