@@ -1,0 +1,141 @@
+name: Unit tests with TorchAO on Ascend NPU
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - self-hosted
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: 'linux-arm64-npu-1'
+        description: 'Runner to run on'
+      device:
+        required: true
+        type: choice
+        options:
+          - /dev/davinci0
+          - /dev/davinci1
+          - /dev/davinci2
+          - /dev/davinci3
+          - /dev/davinci4
+          - /dev/davinci5
+          - /dev/davinci6
+          - /dev/davinci7
+        default: '/dev/davinci0'
+        description: 'Device to use'
+
+  pull_request:
+    paths:
+      - '.github/workflows/torchao.yml'
+  push:
+    branches: 
+      - 'main'
+    paths:
+      - '.github/workflows/torchao.yml'
+  
+  schedule:
+    - cron: "0 0 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true  # cancel previous runs on same branch
+
+# Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
+# declared as "shell: bash -el {0}" on steps that need to be properly activated.
+# It's used to activate ascend-toolkit environment variables.
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.set.outputs.runner }}
+      device: ${{ steps.set.outputs.device }}
+    steps:
+      - id: set
+        run: |
+          echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
+          echo "device=${{ github.event.inputs.device || '/dev/davinci0' }}" >> $GITHUB_OUTPUT
+
+  torchao-ut:
+    needs: prepare
+    if: ${{ github.repository_owner == 'Ascend' }}
+    name: Run unit tests with TorchAO
+    runs-on: ${{ needs.prepare.outputs.runner }}
+    container:
+      image: ascendai/cann:latest
+      options: >-
+        --network host
+        --device ${{ needs.prepare.outputs.device }}
+        --device /dev/davinci_manager
+        --device /dev/devmm_svm
+        --device /dev/hisi_hdc
+    steps:
+      - name: Show NPU info
+        run: |
+          npu-smi info
+          
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+              git gcc g++ make cmake ninja-build python-is-python3 python3-pip
+
+      - name: Install dependencies 
+        run: |
+          pip install \
+              torch==2.7.1 \
+              torch_npu==2.7.1rc1 \
+              torchvision \
+              torchaudio \
+              numpy==1.* \
+              cloudpickle \
+              tornado \
+              ml-dtypes \
+              pytest
+
+      - name: List torch_npu version
+        id: list-version
+        run: |
+          torch_version=$(python -c "import torch; print(torch.__version__)")
+          torch_npu_version=$(python -c "import torch_npu; print(torch_npu.__version__)")
+          echo "torch version: ${torch_version}"
+          echo "torch_npu version: ${torch_npu_version}"
+          echo "torch-npu-version=${torch_npu_version}" >> $GITHUB_OUTPUT
+
+      - name: Show environment info
+        run: |
+          pip list
+
+      - name: Checkout TorchAO
+        uses: actions/checkout@v4
+        with:
+          repository: orangeH25/ao
+          ref: quant/int4/wo/0
+          path: torchao
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Install AO
+        shell: bash
+        run: |
+          set -ex
+          cd torchao && pip install . --no-build-isolation && cd ..
+          python -c "import torch, torchao; print('Torch:', torch.__version__, '| AO:', torchao.__version__)"
+
+
+      - name: Run unit tests
+        working-directory: torchao
+        run: |
+          pytest -v -s test/quantization/quantize_/workflows/int4/test_int4_plain_int32_tensor.py
