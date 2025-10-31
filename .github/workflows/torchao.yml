@@ -1,4 +1,4 @@
-name: Unit tests with DeepSpeed on Ascend NPU
+name: Unit tests with TorchAO on Ascend NPU
 
 on:
   workflow_dispatch:
@@ -27,24 +27,22 @@ on:
           - /dev/davinci7
         default: '/dev/davinci0'
         description: 'Device to use'
-        
+
   pull_request:
     paths:
-      - '.github/workflows/deepspeed.yaml'
-      - 'requirements/**'
+      - '.github/workflows/torchao.yml'
   push:
     branches: 
       - 'main'
     paths:
-      - '.github/workflows/deepspeed.yaml'
-      - 'requirements/**'
+      - '.github/workflows/torchao.yml'
   
   schedule:
     - cron: "0 0 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: true  # cancel previous runs on same branch
 
 # Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
 # declared as "shell: bash -el {0}" on steps that need to be properly activated.
@@ -64,11 +62,11 @@ jobs:
         run: |
           echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
           echo "device=${{ github.event.inputs.device || '/dev/davinci0' }}" >> $GITHUB_OUTPUT
-  
-  deepspeed-ut:
+
+  torchao-ut:
     needs: prepare
     if: ${{ github.repository_owner == 'Ascend' }}
-    name: Run unit tests with DeepSpeed
+    name: Run unit tests with TorchAO
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
@@ -83,31 +81,38 @@ jobs:
         run: |
           npu-smi info
           
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
       - name: Install system dependencies
         run: |
           apt-get update
           apt-get install -y \
               git gcc g++ make cmake ninja-build python-is-python3 python3-pip
 
-      - name: Config mirrors
-        run: |
-          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
-          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install pytorch
+      - name: Install dependencies 
         run: |
           pip install \
-              torch \
+              wheel setuptools \
+              torch==2.7.1 \
               torch_npu==2.7.1rc1 \
               torchvision \
               torchaudio \
               numpy==1.* \
               cloudpickle \
               tornado \
-              ml-dtypes
+              ml-dtypes \
+              pytest \
+              expecttest \
+              unittest-xml-reporting \
+              sentencepiece \
+              hypothesis \
+              transformers \
+              unittest-xml-reporting \
+              parameterized \
+              packaging
 
       - name: List torch_npu version
         id: list-version
@@ -118,60 +123,28 @@ jobs:
           echo "torch_npu version: ${torch_npu_version}"
           echo "torch-npu-version=${torch_npu_version}" >> $GITHUB_OUTPUT
 
-      - name: Checkout transformers
-        uses: actions/checkout@v4
-        with:
-          repository: huggingface/transformers
-          path: transformers
-
-      - name: Install transformers
-        working-directory: transformers
-        run: |
-          pip install .
-
-      - name: Checkout deepspeed
-        uses: actions/checkout@v4
-        with:
-          repository: microsoft/DeepSpeed
-          path: deepspeed
-
-      - name: Install deepspeed dependencies
-        run: |
-          pip install -r requirements/requirements_deepspeed.txt 
-
-      - name: Install deepspeed
-        working-directory: deepspeed
-        run: |
-          pip install .[1bit,autotuning,inf]   
-          ds_report
-
       - name: Show environment info
         run: |
           pip list
 
-      - name: Run unit tests
-        working-directory: deepspeed/tests/unit
-        run: |
-          unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
+      - name: Checkout TorchAO
+        uses: actions/checkout@v4
+        with:
+          repository: orangeH25/ao
+          ref: quant/int4/wo/0
+          path: torchao
+          fetch-depth: 1
+          submodules: recursive
 
-          pytest --verbose accelerator/*
-          pytest --verbose autotuning/*
-          pytest --verbose checkpoint/test_reshape_checkpoint.py
-          pytest --verbose checkpoint/test_moe_checkpoint.py
-          # pytest --verbose checkpoint/test_shared_weights.py
-          pytest --verbose launcher/test_ds_arguments.py launcher/test_run.py
-          pytest --verbose model_parallelism/*
-          pytest --verbose moe/test_moe_tp.py
-          pytest --verbose monitor/*
-          # pytest --verbose utils/*
-          pytest --verbose runtime/test_ds_config_model.py
-          pytest --verbose runtime/pipe/test_pipe_schedule.py
-          pytest --verbose runtime/zero/test_zero_config.py
-          pytest --verbose runtime/zero/test_zero_tiled.py
-          pytest --verbose runtime/zero/test_zeropp.py
-          # pytest --verbose runtime/test_autocast.py
-          # pytest --verbose runtime/test_data.py
-          # pytest --verbose runtime/test_runtime_utils.py
-          # pytest --verbose runtime/activation_checkpointing/*
-          # pytest --verbose runtime/utils/*
-          # pytest --verbose runtime/zero/test_zero_dynamic_class.py
+      - name: Install AO
+        shell: bash
+        run: |
+          set -ex
+          cd torchao && pip install . --no-build-isolation && cd ..
+          python -c "import torch, torchao; print('Torch:', torch.__version__, '| AO:', torchao.__version__)"
+
+
+      - name: Run unit tests
+        working-directory: torchao
+        run: |
+          pytest -v -s test/quantization/quantize_/workflows/int4/test_int4_plain_int32_tensor.py

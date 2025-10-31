@@ -53,10 +53,9 @@ on:
         required: true
         type: choice
         options:
-          - ascendai/cann:7.0.1-910b-ubuntu22.04-py3.8
-          - ascendai/cann:8.0.0-910b-ubuntu22.04-py3.10
-          - ascendai/cann:latest
-        default: "ascendai/cann:latest"
+          - swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-910b-ubuntu22.04-py3.11
+          - swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
+        default: "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest"
         description: "The docker image which will be loaded"
 
 # Only cancel the previous runs when triggered by a pull_request event

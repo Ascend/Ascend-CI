@@ -12,6 +12,14 @@ on:
           - linux-arm64-npu-4
         default: "linux-arm64-npu-1"
         description: "The runner selected to run on"
+      image:
+        required: true
+        type: choice
+        options:
+          - "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-910b-ubuntu22.04-py3.11"
+          - "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest"
+        default: "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest"
+        description: "The container image to use"
 
   pull_request:
     branches:
@@ -41,8 +49,9 @@ jobs:
         id: set
         run: |
           runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
+          image=${{ inputs.image || 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest' }}
           echo "runner=${runner}" >> $GITHUB_OUTPUT
-          echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11"]'
+          echo "images="${image}" >> $GITHUB_OUTPUT
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -104,7 +113,6 @@ jobs:
 
             echo "Checking out PR #$pr_number from $head_repo ($head_ref)"
 
-            # Clone the PR's branch
             git clone --depth=1 --branch "$head_ref" \
             "https://github.com/$head_repo.git" pr-code-$pr_number
             ls -al pr-code-$pr_number
