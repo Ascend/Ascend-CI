@@ -49,10 +49,12 @@ jobs:
           echo "runner=${runner}" >> $GITHUB_OUTPUT
           if [[ ${runner} == "linux-aarch64-310p-1" || \
                 ${runner} == "linux-aarch64-310p-2" ]]; then
-            echo 'images=["ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]' >> $GITHUB_OUTPUT
+            echo 'images=["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-310p-ubuntu22.04-py3.11"' >> $GITHUB_OUTPUT
+            #,"ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]
             echo 'device=["ascend310p"]' >> $GITHUB_OUTPUT
           else
-            echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11"]' >> $GITHUB_OUTPUT #,"ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11","ascendai/cann:latest"
+            echo 'images=["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest"]' >> $GITHUB_OUTPUT
+            #,"ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11","ascendai/cann:latest"
             echo 'device=["ascend910b3"]' >> $GITHUB_OUTPUT
           fi
 

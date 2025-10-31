@@ -36,7 +36,7 @@ jobs:
     name: Run ROLL with CANN container
     runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
     container:
-      image: ascendai/cann:8.1.RC1-910b-ubuntu22.04-py3.10
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
       env:
         HF_ENDPOINT: https://hf-mirror.com
 

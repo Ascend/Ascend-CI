@@ -71,7 +71,7 @@ jobs:
     name: Run unit tests with DeepSpeed
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
-      image: ascendai/cann:latest
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
       options: >-
         --network host
         --device ${{ needs.prepare.outputs.device }}
