@@ -1,4 +1,4 @@
-name: Unit tests with TorchAO on Ascend NPU
+name: Ascend NPU
 
 on:
   workflow_dispatch:
