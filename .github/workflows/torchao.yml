@@ -104,7 +104,15 @@ jobs:
               cloudpickle \
               tornado \
               ml-dtypes \
-              pytest
+              pytest \
+              expecttest \
+              unittest-xml-reporting \
+              sentencepiece \
+              hypothesis \
+              transformers \
+              unittest-xml-reporting \
+              parameterized \
+              packaging
 
       - name: List torch_npu version
         id: list-version
