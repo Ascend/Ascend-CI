@@ -33,6 +33,8 @@ jobs:
 
       - name: build image
         run: |
+            systemctl start docker
+            
             InputName="${{ inputs.dockerfilename }}"
             ImageName=$(echo "$InputName" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 
