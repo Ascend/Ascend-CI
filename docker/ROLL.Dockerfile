@@ -5,6 +5,8 @@ FROM ascendai/cann:8.1.RC1-910b-ubuntu22.04-py3.10
 ENV HF_ENDPOINT=https://hf-mirror.com \
     DEBIAN_FRONTEND=noninteractive
 
+SHELL ["/bin/bash", "-i", "-c"]
+
 # Set the working directory inside the container
 WORKDIR /workspace
 

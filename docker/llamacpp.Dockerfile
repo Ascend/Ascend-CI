@@ -3,7 +3,9 @@
 # ==============================================================================
 
 # Define the CANN base image for easier version updates later
-ARG CANN_BASE_IMAGE=quay.io/ascend/cann:8.2.rc1-310p-openeuler22.03-py3.11
+ARG CHIP_TYPE=910b
+ARG CANN_BASE_IMAGE=quay.io/ascend/cann:8.3.rc1-${CHIP_TYPE}-openeuler24.03-py3.11
+# ARG CANN_BASE_IMAGE=ubuntu:22.04
 
 # ==============================================================================
 # BUILD STAGE
@@ -12,23 +14,27 @@ ARG CANN_BASE_IMAGE=quay.io/ascend/cann:8.2.rc1-310p-openeuler22.03-py3.11
 FROM ${CANN_BASE_IMAGE} AS build
 
 # Define the Ascend chip model for compilation. Default is Ascend910B3
-ARG ASCEND_SOC_TYPE=Ascend310P3
+ARG ASCEND_SOC_TYPE
+ARG CHIP_TYPE
 
-# -- Install build dependencies --
-RUN sed -i 's#https://repo.openeuler.org#https://mirrors.huaweicloud.com/openeuler#g' /etc/yum.repos.d/openEuler.repo \
-    && yum clean all \
-    && yum makecache
+RUN if [ "${CHIP_TYPE}" = "310p" ]; then \
+        ASCEND_SOC_TYPE=Ascend310P3; \
+    else \
+        ASCEND_SOC_TYPE=Ascend910B3; \
+    fi && \
+    echo "${ASCEND_SOC_TYPE}" > /tmp/soc_type
 
+RUN echo "Using ASCEND_SOC_TYPE=${ASCEND_SOC_TYPE} for build"
 # -- Install build dependencies --
 RUN yum install -y gcc g++ cmake make git libcurl-devel python3 python3-pip && \
     yum clean all && \
     rm -rf /var/cache/yum
 
-# # -- Set the working directory --
-# WORKDIR /app
+# -- Set the working directory --
+WORKDIR /app
 
-# # -- Copy project files --
-# COPY . .
+# -- Copy project files --
+COPY . .
 
 # -- Set CANN environment variables (required for compilation) --
 # Using ENV instead of `source` allows environment variables to persist across the entire image layer
@@ -42,11 +48,12 @@ ENV LD_LIBRARY_PATH=${ASCEND_TOOLKIT_HOME}/runtime/lib64/stub:$LD_LIBRARY_PATH
 
 # -- Build llama.cpp --
 # Use the passed ASCEND_SOC_TYPE argument and add general build options
-RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp.git /app
-
-WORKDIR /app
-
-RUN source /usr/local/Ascend/ascend-toolkit/set_env.sh --force && \
+RUN if [ -z "${ASCEND_SOC_TYPE}" ]; then \
+        ASCEND_SOC_TYPE=$(cat /tmp/soc_type); \
+    fi && \
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh --force \
+    && echo "Using ASCEND_SOC_TYPE=${ASCEND_SOC_TYPE} for build" \
+    && \
     cmake -B build \
         -DGGML_CANN=ON \
         -DCMAKE_BUILD_TYPE=Release \
@@ -136,3 +143,4 @@ COPY --from=build /app/full/llama-server /app
 HEALTHCHECK --interval=5m CMD [ "curl", "-f", "http://localhost:8080/health" ]
 
 ENTRYPOINT [ "/app/llama-server" ]
+
