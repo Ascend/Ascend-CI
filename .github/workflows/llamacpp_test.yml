@@ -49,10 +49,10 @@ jobs:
           echo "runner=${runner}" >>"${GITHUB_OUTPUT}"
 
           if [[ "${runner}" == linux-aarch64-310p-* ]]; then
-            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1.alpha001-310p-openeuler22.03-py3.11"]'
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1.alpha001-310p-ubuntu22.04-py3.11"]'
             device='["ascend310p"]'
           else
-            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1.alpha001-910b-openeuler22.03-py3.11"]'
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1.alpha001-910b-ubuntu22.04-py3.11"]'
             device='["ascend910b"]'
           fi
 
