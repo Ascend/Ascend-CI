@@ -44,19 +44,22 @@ jobs:
     steps:
       - name: Set outputs
         id: set
-        run: |  
-          runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
-          echo "runner=${runner}" >> $GITHUB_OUTPUT
-          if [[ ${runner} == "linux-aarch64-310p-1" || \
-                ${runner} == "linux-aarch64-310p-2" ]]; then
-            echo 'images=["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-310p-ubuntu22.04-py3.11"]' >> $GITHUB_OUTPUT
-            #,"ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]
-            echo 'device=["ascend310p"]' >> $GITHUB_OUTPUT
+        run: |
+          runner="${{ inputs.runner || 'linux-arm64-npu-1' }}"
+          echo "runner=${runner}" >>"${GITHUB_OUTPUT}"
+
+          if [[ "${runner}" == linux-aarch64-310p-* ]]; then
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1.alpha001-310p-openeuler22.03-py3.11"]'
+            device='["ascend310p"]'
           else
-            echo 'images=["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest"]' >> $GITHUB_OUTPUT
-            #,"ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11","ascendai/cann:latest"
-            echo 'device=["ascend910b3"]' >> $GITHUB_OUTPUT
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1.alpha001-910b-openeuler22.03-py3.11"]'
+            device='["ascend910b"]'
           fi
+
+          {
+            echo "images=${image}"
+            echo "device=${device}"
+          } >>"${GITHUB_OUTPUT}"
 
   test:
     name: Build llama.cpp on OpenEuler for Arm64
@@ -86,7 +89,7 @@ jobs:
       - name: Install system dependencies
         run: |
           pkg_manager=""
-          for cmd in apt yum dnf zypper pacman; do
+          for cmd in apt yum dnf; do
           if command -v $cmd >/dev/null 2>&1; then
               pkg_manager=$cmd
               break
@@ -101,14 +104,6 @@ jobs:
           elif [ "$pkg_manager" = "yum" ] || [ "$pkg_manager" = "dnf" ]; then
             $pkg_manager install -y \
               git gcc gcc-c++ make cmake libcurl-devel unzip
-          elif [ "$pkg_manager" = "zypper" ]; then
-            zypper install -y \
-              git gcc gcc-c++ make cmake libcurl-devel unzip
-          elif [ "$pkg_manager" = "pacman" ]; then
-            pacman -Syu --noconfirm
-            pacman -S --noconfirm \
-              git gcc make cmake curl \
-              glibc libgl libsndfile libcurl-compat unzip
           else
             echo "Unsupported package manager. Please install dependencies manually."
             exit 1
@@ -162,13 +157,18 @@ jobs:
               SQR,SQRT,SSM_CONV,SSM_SCAN,STEP,SUB,SUM,SUM_ROWS,SWIGLU,TANH,TIMESTEP_EMBEDDING,UPSCALE" >> $GITHUB_OUTPUT
 
       - name: test backend ops
+        id: backend-ops
         working-directory: llama.cpp/build/bin
         run: |
+          set -o pipefail
+          LOG_DIR="backend-op-logs"
+          mkdir -p "${LOG_DIR}"
           failed_ops=""
           for op in $(echo ${{ steps.define-ops.outputs.ops }} | tr ',' '\n')
           do
             echo "Testing operator: $op"
-            if ! ./test-backend-ops test -o $op; then
+            log_file="${LOG_DIR}/${op}.log"
+            if ! ./test-backend-ops test -o "$op" 2>&1 | tee "${log_file}"; then
               echo "Operator $op failed, continuing..."
               failed_ops="${failed_ops}${op}\n"
             fi
@@ -180,6 +180,14 @@ jobs:
           else
             echo "All operators passed successfully!" >> $GITHUB_STEP_SUMMARY
           fi
+          echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
+
+      - name: Summarize backend operator support
+        working-directory: llama.cpp
+        run: |
+          python ../Ascend-CI/script/classify_backend_ops.py \
+            --log-dir "${{ steps.backend-ops.outputs.log-dir }}" \
+            --summary-file "${GITHUB_STEP_SUMMARY}"
     
       - name: Download model and dateset
         working-directory: llama.cpp
