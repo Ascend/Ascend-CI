@@ -180,6 +180,8 @@ jobs:
             echo "All operators passed."
           fi
           echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
+        shell:
+          bash
 
       - name: Summarize backend operator support
         working-directory: llama.cpp
