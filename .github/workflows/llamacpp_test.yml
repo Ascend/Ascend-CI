@@ -175,10 +175,9 @@ jobs:
           done
 
           if [ -n "$failed_ops" ]; then
-            echo "### Failed Operators" >> $GITHUB_STEP_SUMMARY
-            echo -e "$failed_ops" >> $GITHUB_STEP_SUMMARY
+            echo -e "The following operators failed:\n$failed_ops"
           else
-            echo "All operators passed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "All operators passed."
           fi
           echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
 
