@@ -1,6 +1,6 @@
 name: Build and publish to PyPI
 
-# on:
+on:
 #   workflow_dispatch:
 #   schedule:
 #     - cron: '0 11 * * 0'
