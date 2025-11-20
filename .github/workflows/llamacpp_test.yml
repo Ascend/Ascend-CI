@@ -179,16 +179,17 @@ jobs:
           else
             echo "All operators passed."
           fi
-          echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
+          # echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
         shell:
           bash
 
       - name: Summarize backend operator support
         working-directory: llama.cpp
         run: |
+          
           python ../script/classify_backend_ops.py \
-            --log-dir ../docs/llamacpp_ops.md \
-            --summary-file "${GITHUB_STEP_SUMMARY}"
+            --log-dir "${{ steps.backend-ops.outputs.log-dir }}" \
+            --summary-file ../docs/llamacpp_ops.md
     
       - name: Download model and dateset
         working-directory: llama.cpp
