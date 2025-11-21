@@ -58,10 +58,12 @@ def format_markdown(classification: Dict[str, List[str]]) -> str:
             continue
         symbol = STATUS_SYMBOLS.get(status, "?")
         for op in sorted(operators):
-            lines.append(f"| {op} | {symbol} ({status}) |")
+            lines.append(f"| {op} | {symbol} |")
 
     if len(lines) == 4:  # no rows added
         lines.append("| None | - |")
+
+    lines.append("\nTips:the legend: ✓ supported, △ partially supported, ✗ fail, unsupported, ? unknown")
     return "\n".join(lines)
 
 
