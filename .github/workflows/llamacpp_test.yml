@@ -49,7 +49,7 @@ jobs:
           echo "runner=${runner}" >>"${GITHUB_OUTPUT}"
 
           if [[ "${runner}" == linux-aarch64-310p-* ]]; then
-            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc2-310p-ubuntu22.04-py3.11"]'
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.1.rc1-310p-ubuntu22.04-py3.11"]'
             device='["ascend310p"]'
           else
             image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.1.rc1-910b-ubuntu22.04-py3.11"]'
@@ -246,32 +246,32 @@ jobs:
             --outtype f16 \
             --mmproj
 
-      # - name: Accuracy check
-      #   working-directory: llama.cpp
-      #   run: |
-      #     ./build/bin/llama-perplexity  \
-      #       --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
-      #       -f data/wikitext-2-raw/wiki.test.raw \
-      #       -t 8 \
-      #       -c 4096 \
-      #       -ngl 32 \
-      #       --batch-size 512 \
-      #       --ppl-stride 64 \
-      #       --ppl-output-type 1
+      - name: Accuracy check
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-perplexity  \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+            -f data/wikitext-2-raw/wiki.test.raw \
+            -t 8 \
+            -c 4096 \
+            -ngl 32 \
+            --batch-size 512 \
+            --ppl-stride 64 \
+            --ppl-output-type 1
 
-      # - name: Run llama-bench
-      #   working-directory: llama.cpp
-      #   run: |
-      #     ./build/bin/llama-bench \
-      #       --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
-      #       --n-prompt 256 \
-      #       --n-gen 64 \
-      #       --batch-size 512 \
-      #       --ubatch-size 128 \
-      #       --threads 16 \
-      #       --repetitions 3 \
-      #       --output json \
-      #       --progress
+      - name: Run llama-bench
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-bench \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+            --n-prompt 256 \
+            --n-gen 64 \
+            --batch-size 512 \
+            --ubatch-size 128 \
+            --threads 16 \
+            --repetitions 3 \
+            --output json \
+            --progress
 
       - name: Run llama-batched-bench
         working-directory: llama.cpp
