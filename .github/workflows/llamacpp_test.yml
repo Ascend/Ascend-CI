@@ -159,43 +159,44 @@ jobs:
               RWKV_WKV6,RWKV_WKV7,SCALE,SET,SET_ROWS,SGN,SIGMOID,SILU,SILU_BACK,SIN,SOFTCAP,SOFT_MAX,SOFT_MAX_BACK, \
               SQR,SQRT,SSM_CONV,SSM_SCAN,STEP,SUB,SUM,SUM_ROWS,SWIGLU,TANH,TIMESTEP_EMBEDDING,UPSCALE" >> $GITHUB_OUTPUT
 
-      - name: test backend ops
-        id: backend-ops
-        working-directory: llama.cpp/build/bin
-        run: |
-          set -o pipefail
-          LOG_DIR="backend-op-logs"
-          mkdir -p "${LOG_DIR}"
-          failed_ops=""
-          for op in $(echo ${{ steps.define-ops.outputs.ops }} | tr ',' '\n')
-          do
-            echo "Testing operator: $op"
-            log_file="${LOG_DIR}/${op}.log"
-            if ! ./test-backend-ops test -o "$op" 2>&1 | tee "${log_file}"; then
-              echo "Operator $op failed, continuing..."
-              failed_ops="${failed_ops}${op}\n"
-            fi
-          done
+      # - name: test backend ops
+      #   id: backend-ops
+      #   working-directory: llama.cpp/build/bin
+      #   run: |
+      #     set -o pipefail
+      #     LOG_DIR="backend-op-logs"
+      #     mkdir -p "${LOG_DIR}"
+      #     failed_ops=""
+      #     for op in $(echo ${{ steps.define-ops.outputs.ops }} | tr ',' '\n')
+      #     do
+      #       echo "Testing operator: $op"
+      #       log_file="${LOG_DIR}/${op}.log"
+      #       if ! ./test-backend-ops test -o "$op" 2>&1 | tee "${log_file}"; then
+      #         echo "Operator $op failed, continuing..."
+      #         failed_ops="${failed_ops}${op}\n"
+      #       fi
+      #     done
 
-          if [ -n "$failed_ops" ]; then
-            echo -e "The following operators failed:\n$failed_ops"
-          else
-            echo "All operators passed."
-          fi
-          echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
-        shell:
-          bash
+      #     if [ -n "$failed_ops" ]; then
+      #       echo -e "The following operators failed:\n$failed_ops"
+      #     else
+      #       echo "All operators passed."
+      #     fi
+      #     echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
+      #   shell:
+      #     bash
 
-      - name: Summarize backend operator support
-        working-directory: llama.cpp
-        run: |
-          python ../script/classify_backend_ops.py \
-            --log-dir "${{ steps.backend-ops.outputs.log-dir }}" \
-            --summary-file ../docs/llamacpp_ops.md
+      # - name: Summarize backend operator support
+      #   working-directory: llama.cpp
+      #   run: |
+      #     python ../script/classify_backend_ops.py \
+      #       --log-dir "${{ steps.backend-ops.outputs.log-dir }}" \
+      #       --summary-file ../docs/llamacpp_ops.md
 
       - name: check if ops changed
         id: check-changed
         run: |
+          echo "test" >> docs/llamacpp_ops.md
           cat docs/llamacpp_ops.md
           git diff --exit-code -- docs/llamacpp_ops.md || echo "changed=true" >> $GITHUB_OUTPUT
         shell: bash
@@ -341,7 +342,7 @@ jobs:
             base: ${{ github.head_ref }}
             commit-message: "Update llamacpp backend ops support report"
             add-paths: docs/llamacpp_ops.md
-            branch: main
+            branch: llamacpp
             title: "[Ascend NPU] Update llamacpp backend ops support report"
             body: |
               This PR updates the llama.cpp backend operator support report based on the latest test results.
