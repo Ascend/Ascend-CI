@@ -258,21 +258,19 @@ jobs:
       #       --ppl-stride 64 \
       #       --ppl-output-type 1
 
-      - name: Run llama-bench
-        working-directory: llama.cpp
-        env:
-          GGML_CANN_WEIGHT_NZ: "off"
-        run: |
-          ./build/bin/llama-bench \
-            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
-            --n-prompt 256 \
-            --n-gen 64 \
-            --batch-size 512 \
-            --ubatch-size 128 \
-            --threads 16 \
-            --repetitions 3 \
-            --output json \
-            --progress
+      # - name: Run llama-bench
+      #   working-directory: llama.cpp
+      #   run: |
+      #     ./build/bin/llama-bench \
+      #       --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+      #       --n-prompt 256 \
+      #       --n-gen 64 \
+      #       --batch-size 512 \
+      #       --ubatch-size 128 \
+      #       --threads 16 \
+      #       --repetitions 3 \
+      #       --output json \
+      #       --progress
 
       - name: Run llama-batched-bench
         working-directory: llama.cpp
