@@ -49,10 +49,10 @@ jobs:
           echo "runner=${runner}" >>"${GITHUB_OUTPUT}"
 
           if [[ "${runner}" == linux-aarch64-310p-* ]]; then
-            image='["8.3.rc2-310p-ubuntu22.04-py3.11"]'
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc2-310p-ubuntu22.04-py3.11"]'
             device='["ascend310p"]'
           else
-            image='["8.1.rc1-910b-openeuler22.03-py3.11"]'
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.1.rc1-910b-ubuntu22.04-py3.11"]'
             # image='["8.3.rc2-910-ubuntu22.04-py3.11"]'
             device='["ascend910b"]'
           fi
@@ -70,7 +70,7 @@ jobs:
       upload-report: ${{ steps.upload-report.outputs.artifact-url }}
     strategy:
       matrix:
-        image : swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:${{ fromJSON(needs.prepare.outputs.images) }}
+        image: ${{ fromJSON(needs.prepare.outputs.images) }}
         device: ${{ fromJSON(needs.prepare.outputs.device) }}
         build: ['Release']
     runs-on: ${{ needs.prepare.outputs.runner }}
