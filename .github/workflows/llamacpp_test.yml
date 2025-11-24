@@ -191,7 +191,7 @@ jobs:
         run: |
           python ../script/classify_backend_ops.py \
             --log-dir "${{ steps.backend-ops.outputs.log-dir }}" \
-            --summary-file llamacpp_ops.md
+            --summary-file ../docs/llamacpp_ops.md
 
       - name: check if ops changed
         id: check-changed
