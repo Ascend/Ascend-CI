@@ -260,6 +260,8 @@ jobs:
 
       - name: Run llama-bench
         working-directory: llama.cpp
+        env:
+          GGML_CANN_WEIGHT_NZ: "off"
         run: |
           ./build/bin/llama-bench \
             --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
