@@ -333,16 +333,13 @@ jobs:
           uses: actions/download-artifact@v4
           with:
             name: llamacpp_ops.md
-
-        - name: Move artifact into docs
-          run: |
-            mv llamacpp_ops.md docs/llamacpp_ops.md
+            path: docs/llamacpp_ops.md
   
         # See: https://github.com/peter-evans/create-pull-request
         - name: Create a pull request to update benchmark result
           uses: peter-evans/create-pull-request@v7
           with:
-            token: ${{ secrets.COSDT_BOT_TOKEN }}
+            token: ${{ secrets.GITHUB_TOKEN }}
             base: main
             branch: llamacpp-report/${{ github.run_id }}
             commit-message: "Update llamacpp backend ops support report"
