@@ -339,10 +339,10 @@ jobs:
           uses: peter-evans/create-pull-request@v7
           with:
             token: ${{ secrets.COSDT_BOT_TOKEN }}
-            base: ${{ github.head_ref }}
+            base: main
+            branch: llamacpp-report/${{ github.run_id }}
             commit-message: "Update llamacpp backend ops support report"
             add-paths: docs/llamacpp_ops.md
-            branch: llamacpp
             title: "[Ascend NPU] Update llamacpp backend ops support report"
             body: |
               This PR updates the llama.cpp backend operator support report based on the latest test results.
