@@ -338,7 +338,7 @@ jobs:
         - name: Create a pull request to update benchmark result
           uses: peter-evans/create-pull-request@v7
           with:
-            token: ${{ secrets.COSDT_BOT_TOKEN }}
+            token: ${{ secrets.GITHUB_TOKEN }}
             base: main
             branch: llamacpp-report/${{ github.run_id }}
             commit-message: "Update llamacpp backend ops support report"
