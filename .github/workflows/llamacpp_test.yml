@@ -159,38 +159,38 @@ jobs:
               RWKV_WKV6,RWKV_WKV7,SCALE,SET,SET_ROWS,SGN,SIGMOID,SILU,SILU_BACK,SIN,SOFTCAP,SOFT_MAX,SOFT_MAX_BACK, \
               SQR,SQRT,SSM_CONV,SSM_SCAN,STEP,SUB,SUM,SUM_ROWS,SWIGLU,TANH,TIMESTEP_EMBEDDING,UPSCALE" >> $GITHUB_OUTPUT
 
-      # - name: test backend ops
-      #   id: backend-ops
-      #   working-directory: llama.cpp/build/bin
-      #   run: |
-      #     set -o pipefail
-      #     LOG_DIR="backend-op-logs"
-      #     mkdir -p "${LOG_DIR}"
-      #     failed_ops=""
-      #     for op in $(echo ${{ steps.define-ops.outputs.ops }} | tr ',' '\n')
-      #     do
-      #       echo "Testing operator: $op"
-      #       log_file="${LOG_DIR}/${op}.log"
-      #       if ! ./test-backend-ops test -o "$op" 2>&1 | tee "${log_file}"; then
-      #         echo "Operator $op failed, continuing..."
-      #         failed_ops="${failed_ops}${op}\n"
-      #       fi
-      #     done
+      - name: test backend ops
+        id: backend-ops
+        working-directory: llama.cpp/build/bin
+        run: |
+          set -o pipefail
+          LOG_DIR="backend-op-logs"
+          mkdir -p "${LOG_DIR}"
+          failed_ops=""
+          for op in $(echo ${{ steps.define-ops.outputs.ops }} | tr ',' '\n')
+          do
+            echo "Testing operator: $op"
+            log_file="${LOG_DIR}/${op}.log"
+            if ! ./test-backend-ops test -o "$op" 2>&1 | tee "${log_file}"; then
+              echo "Operator $op failed, continuing..."
+              failed_ops="${failed_ops}${op}\n"
+            fi
+          done
 
-      #     if [ -n "$failed_ops" ]; then
-      #       echo -e "The following operators failed:\n$failed_ops"
-      #     else
-      #       echo "All operators passed."
-      #     fi
-      #     echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
-      #   shell:
-      #     bash
+          if [ -n "$failed_ops" ]; then
+            echo -e "The following operators failed:\n$failed_ops"
+          else
+            echo "All operators passed."
+          fi
+          echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
+        shell:
+          bash
 
-      # - name: Summarize backend operator support
-      #   run: |
-      #     python script/classify_backend_ops.py \
-      #       --log-dir "${{ steps.backend-ops.outputs.log-dir }}" \
-      #       --summary-file docs/llamacpp_ops.md
+      - name: Summarize backend operator support
+        run: |
+          python script/classify_backend_ops.py \
+            --log-dir "${{ steps.backend-ops.outputs.log-dir }}" \
+            --summary-file docs/llamacpp_ops.md
 
       - name: check if ops changed
         id: check-changed
@@ -210,113 +210,113 @@ jobs:
           retention-days: 1
           overwrite: true
     
-      # - name: Download model and dateset
-      #   working-directory: llama.cpp
-      #   run: |
-      #     mkdir -p models/Qwen2.5-0.5B-Instruct
-      #     huggingface-cli download \
-      #       --resume-download Qwen/Qwen2.5-0.5B-Instruct \
-      #       --local-dir models/Qwen2.5-0.5B-Instruct
+      - name: Download model and dateset
+        working-directory: llama.cpp
+        run: |
+          mkdir -p models/Qwen2.5-0.5B-Instruct
+          huggingface-cli download \
+            --resume-download Qwen/Qwen2.5-0.5B-Instruct \
+            --local-dir models/Qwen2.5-0.5B-Instruct
           
-      #     mkdir -p models/Qwen2.5-VL-3B-Instruct
-      #     huggingface-cli download \
-      #       --resume-download Qwen/Qwen2.5-VL-3B-Instruct \
-      #       --local-dir models/Qwen2.5-VL-3B-Instruct
+          mkdir -p models/Qwen2.5-VL-3B-Instruct
+          huggingface-cli download \
+            --resume-download Qwen/Qwen2.5-VL-3B-Instruct \
+            --local-dir models/Qwen2.5-VL-3B-Instruct
           
-      #     mkdir -p data
-      #     huggingface-cli download --repo-type dataset\
-      #       --resume-download ggml-org/ci \
-      #       --local-dir data
+          mkdir -p data
+          huggingface-cli download --repo-type dataset\
+            --resume-download ggml-org/ci \
+            --local-dir data
           
-      #     unzip -o data/wikitext-2-raw-v1.zip -d data/
-      #     rm -f data/wikitext-2-raw-v1.zip
+          unzip -o data/wikitext-2-raw-v1.zip -d data/
+          rm -f data/wikitext-2-raw-v1.zip
 
-      # - name: convert Qwen2.5 model
-      #   working-directory: llama.cpp
-      #   run: |
-      #     python3 convert_hf_to_gguf.py models/Qwen2.5-0.5B-Instruct \
-      #       --outfile models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
-      #       --outtype f16
+      - name: convert Qwen2.5 model
+        working-directory: llama.cpp
+        run: |
+          python3 convert_hf_to_gguf.py models/Qwen2.5-0.5B-Instruct \
+            --outfile models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+            --outtype f16
 
-      #     python3 convert_hf_to_gguf.py models/Qwen2.5-VL-3B-Instruct \
-      #       --outfile models/Qwen2.5-VL-3B-Instruct/ggml-model-f16.gguf \
-      #       --outtype f16
+          python3 convert_hf_to_gguf.py models/Qwen2.5-VL-3B-Instruct \
+            --outfile models/Qwen2.5-VL-3B-Instruct/ggml-model-f16.gguf \
+            --outtype f16
 
-      #     python3 convert_hf_to_gguf.py models/Qwen2.5-VL-3B-Instruct \
-      #       --outfile models/Qwen2.5-VL-3B-Instruct/mmproj.gguf \
-      #       --outtype f16 \
-      #       --mmproj
+          python3 convert_hf_to_gguf.py models/Qwen2.5-VL-3B-Instruct \
+            --outfile models/Qwen2.5-VL-3B-Instruct/mmproj.gguf \
+            --outtype f16 \
+            --mmproj
 
-      # - name: Accuracy check
-      #   working-directory: llama.cpp
-      #   run: |
-      #     ./build/bin/llama-perplexity  \
-      #       --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
-      #       -f data/wikitext-2-raw/wiki.test.raw \
-      #       -t 8 \
-      #       -c 4096 \
-      #       -ngl 32 \
-      #       --batch-size 512 \
-      #       --ppl-stride 64 \
-      #       --ppl-output-type 1
+      - name: Accuracy check
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-perplexity  \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+            -f data/wikitext-2-raw/wiki.test.raw \
+            -t 8 \
+            -c 4096 \
+            -ngl 32 \
+            --batch-size 512 \
+            --ppl-stride 64 \
+            --ppl-output-type 1
 
-      # - name: Run llama-bench
-      #   working-directory: llama.cpp
-      #   run: |
-      #     ./build/bin/llama-bench \
-      #       --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
-      #       --n-prompt 256 \
-      #       --n-gen 64 \
-      #       --batch-size 512 \
-      #       --ubatch-size 128 \
-      #       --threads 16 \
-      #       --repetitions 3 \
-      #       --output json \
-      #       --progress
+      - name: Run llama-bench
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-bench \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+            --n-prompt 256 \
+            --n-gen 64 \
+            --batch-size 512 \
+            --ubatch-size 128 \
+            --threads 16 \
+            --repetitions 3 \
+            --output json \
+            --progress
 
-      # - name: Run llama-batched-bench
-      #   working-directory: llama.cpp
-      #   run: |
-      #     ./build/bin/llama-batched-bench \
-      #       --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
-      #         -c 8192 \
-      #         -b 512 \
-      #         -ub 256 \
-      #         -t 16 \
-      #         -npp 128,256 \
-      #         -ntg 128,256 \
-      #         -npl 1,2,4,8,16 \
-      #         --output-format jsonl
+      - name: Run llama-batched-bench
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-batched-bench \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+              -c 8192 \
+              -b 512 \
+              -ub 256 \
+              -t 16 \
+              -npp 128,256 \
+              -ntg 128,256 \
+              -npl 1,2,4,8,16 \
+              --output-format jsonl
 
-      # - name: Run llama-parallel
-      #   working-directory: llama.cpp
-      #   run: |
-      #     ./build/bin/llama-parallel \
-      #       --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
-      #         -p "The quick brown fox jumps over the lazy dog." \
-      #         -n 128 \
-      #         -c 8192 \
-      #         -b 512 \
-      #         -ub 128 \
-      #         -t 8 \
-      #         --sequences 8 \
-      #         --junk 4 \
-      #         -pps \
-      #         --verbose-prompt
+      - name: Run llama-parallel
+        working-directory: llama.cpp
+        run: |
+          ./build/bin/llama-parallel \
+            --model models/Qwen2.5-0.5B-Instruct/ggml-model-f16.gguf \
+              -p "The quick brown fox jumps over the lazy dog." \
+              -n 128 \
+              -c 8192 \
+              -b 512 \
+              -ub 128 \
+              -t 8 \
+              --sequences 8 \
+              --junk 4 \
+              -pps \
+              --verbose-prompt
 
-      # - name: Run llama-mtmd-cli
-      #   working-directory: llama.cpp
-      #   env:
-      #     GGML_CANN_DISABLE: "1"
-      #   run: |
-      #     ./build/bin/llama-mtmd-cli \
-      #       --model models/Qwen2.5-VL-3B-Instruct/ggml-model-f16.gguf \
-      #       --mmproj models/Qwen2.5-VL-3B-Instruct/mmproj.gguf \
-      #       --image media/llama0-banner.png \
-      #       -p "Describe the image in detail." \
-      #       -t 4 \
-      #       -n 128 \
-      #       --chat-template vicuna
+      - name: Run llama-mtmd-cli
+        working-directory: llama.cpp
+        env:
+          GGML_CANN_DISABLE: "1"
+        run: |
+          ./build/bin/llama-mtmd-cli \
+            --model models/Qwen2.5-VL-3B-Instruct/ggml-model-f16.gguf \
+            --mmproj models/Qwen2.5-VL-3B-Instruct/mmproj.gguf \
+            --image media/llama0-banner.png \
+            -p "Describe the image in detail." \
+            -t 4 \
+            -n 128 \
+            --chat-template vicuna
 
   create-pr:
       if: ${{ needs.test.outputs.check-changed == 'true' }}
