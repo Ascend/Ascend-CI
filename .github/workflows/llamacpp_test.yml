@@ -339,7 +339,7 @@ jobs:
           uses: peter-evans/create-pull-request@v7
           with:
             token: ${{ secrets.GITHUB_TOKEN }}
-            base: llamacpp
+            base: ${{ github.ref_name != '' && github.ref_name || 'main' }}
             branch: llamacpp-report/${{ github.run_id }}
             commit-message: "Update llamacpp backend ops support report"
             add-paths: docs/llamacpp_ops.md
