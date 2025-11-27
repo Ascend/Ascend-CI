@@ -304,12 +304,11 @@ jobs:
 
       - name: Run llama-mtmd-cli
         working-directory: llama.cpp
-        env:
-          GGML_CANN_DISABLE: "1"
         run: |
           ./build/bin/llama-mtmd-cli \
             --model models/Qwen2.5-VL-3B-Instruct/ggml-model-f16.gguf \
             --mmproj models/Qwen2.5-VL-3B-Instruct/mmproj.gguf \
+            --image ../src/images/dog.png \
             --image media/llama0-banner.png \
             -p "Describe the image in detail." \
             -t 4 \
