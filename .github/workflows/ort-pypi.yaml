@@ -1,9 +1,15 @@
 name: Build and publish to PyPI
 
 on:
-#   workflow_dispatch:
-#   schedule:
-#     - cron: '0 11 * * 0'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'script/**'
+      - '.github/workflows/ort-pypi.yaml'
+  # schedule:
+  #   - cron: '0 11 * * 0'
 
 jobs:
   check:
