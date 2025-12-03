@@ -93,8 +93,14 @@ def main() -> None:
     markdown = format_markdown(classification)
     print(markdown)
     if args.summary_file:
-        with open(args.summary_file, "a", encoding="utf-8") as fh:
-            fh.write(markdown + "\n")
+        summary_path = Path(args.summary_file)
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        new_content = markdown + "\n"
+        previous_content = ""
+        if summary_path.exists():
+            previous_content = summary_path.read_text(encoding="utf-8")
+        if previous_content != new_content:
+            summary_path.write_text(new_content, encoding="utf-8")
 
 
 if __name__ == "__main__":
