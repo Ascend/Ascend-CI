@@ -35,7 +35,7 @@ def classify_log(text: str) -> str:
 
 
 STATUS_SYMBOLS = {
-    "supported": "✅ ",
+    "supported": "✅",
     "partial": "🟡",
     "fail": "❌",
     "unsupported": "❓",

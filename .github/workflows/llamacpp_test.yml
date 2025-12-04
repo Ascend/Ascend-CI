@@ -354,6 +354,6 @@ jobs:
               [1]: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
               [2]: ${{ needs.test.outputs.upload-report }}
   
-              cc: @hipudding @noemotiovon @xuedinge233
             reviewers: xuedinge233
             delete-branch: true
+#             cc: @hipudding @noemotiovon @xuedinge233
