@@ -29,6 +29,9 @@ on:
   schedule:
     - cron: '0 12 * * *'
 
+permissions:
+  contents: write
+  pull-requests: write
       
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -44,27 +47,35 @@ jobs:
     steps:
       - name: Set outputs
         id: set
-        run: |  
-          runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
-          echo "runner=${runner}" >> $GITHUB_OUTPUT
-          if [[ ${runner} == "linux-aarch64-310p-1" || \
-                ${runner} == "linux-aarch64-310p-2" ]]; then
-            echo 'images=["ascendai/cann:8.2.rc1-310p-ubuntu22.04-py3.11","ascendai/cann:8.2.rc1-310p-openeuler22.03-py3.11"]' >> $GITHUB_OUTPUT
-            echo 'device=["ascend310p"]' >> $GITHUB_OUTPUT
+        run: |
+          runner="${{ inputs.runner || 'linux-arm64-npu-1' }}"
+          echo "runner=${runner}" >>"${GITHUB_OUTPUT}"
+
+          if [[ "${runner}" == linux-aarch64-310p-* ]]; then
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.1.rc1-310p-ubuntu22.04-py3.11"]'
+            device='["ascend310p"]'
           else
-            echo 'images=["ascendai/cann:8.2.rc1-910b-ubuntu22.04-py3.11"]' >> $GITHUB_OUTPUT #,"ascendai/cann:8.2.rc1-910b-openeuler22.03-py3.11","ascendai/cann:latest"
-            echo 'device=["ascend910b3"]' >> $GITHUB_OUTPUT
+            image='["swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.1.rc1-910b-ubuntu22.04-py3.11"]'
+            # image='["8.3.rc2-910-ubuntu22.04-py3.11"]'
+            device='["ascend910b"]'
           fi
+
+          {
+            echo "images=${image}"
+            echo "device=${device}"
+          } >>"${GITHUB_OUTPUT}"
 
   test:
     name: Build llama.cpp on OpenEuler for Arm64
     needs: prepare
+    outputs:
+      check-changed: ${{ steps.check-changed.outputs.changed }}
+      upload-report: ${{ steps.upload-report.outputs.artifact-url }}
     strategy:
       matrix:
-        image : ${{ fromJSON(needs.prepare.outputs.images) }}
+        image: ${{ fromJSON(needs.prepare.outputs.images) }}
         device: ${{ fromJSON(needs.prepare.outputs.device) }}
-        build:
-          - 'Release'
+        build: ['Release']
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
       image: ${{ matrix.image }}
@@ -84,7 +95,7 @@ jobs:
       - name: Install system dependencies
         run: |
           pkg_manager=""
-          for cmd in apt yum dnf zypper pacman; do
+          for cmd in apt yum dnf; do
           if command -v $cmd >/dev/null 2>&1; then
               pkg_manager=$cmd
               break
@@ -99,14 +110,6 @@ jobs:
           elif [ "$pkg_manager" = "yum" ] || [ "$pkg_manager" = "dnf" ]; then
             $pkg_manager install -y \
               git gcc gcc-c++ make cmake libcurl-devel unzip
-          elif [ "$pkg_manager" = "zypper" ]; then
-            zypper install -y \
-              git gcc gcc-c++ make cmake libcurl-devel unzip
-          elif [ "$pkg_manager" = "pacman" ]; then
-            pacman -Syu --noconfirm
-            pacman -S --noconfirm \
-              git gcc make cmake curl \
-              glibc libgl libsndfile libcurl-compat unzip
           else
             echo "Unsupported package manager. Please install dependencies manually."
             exit 1
@@ -160,24 +163,53 @@ jobs:
               SQR,SQRT,SSM_CONV,SSM_SCAN,STEP,SUB,SUM,SUM_ROWS,SWIGLU,TANH,TIMESTEP_EMBEDDING,UPSCALE" >> $GITHUB_OUTPUT
 
       - name: test backend ops
+        id: backend-ops
         working-directory: llama.cpp/build/bin
         run: |
+          set -o pipefail
+          LOG_DIR="backend-op-logs"
+          mkdir -p "${LOG_DIR}"
           failed_ops=""
           for op in $(echo ${{ steps.define-ops.outputs.ops }} | tr ',' '\n')
           do
             echo "Testing operator: $op"
-            if ! ./test-backend-ops test -o $op; then
+            log_file="${LOG_DIR}/${op}.log"
+            if ! ./test-backend-ops test -o "$op" 2>&1 | tee "${log_file}"; then
               echo "Operator $op failed, continuing..."
               failed_ops="${failed_ops}${op}\n"
             fi
           done
 
           if [ -n "$failed_ops" ]; then
-            echo "### Failed Operators" >> $GITHUB_STEP_SUMMARY
-            echo -e "$failed_ops" >> $GITHUB_STEP_SUMMARY
+            echo -e "The following operators failed:\n$failed_ops"
           else
-            echo "All operators passed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "All operators passed."
           fi
+          echo "log-dir=${PWD}/${LOG_DIR}" >> "${GITHUB_OUTPUT}"
+        shell:
+          bash
+
+      - name: Summarize backend operator support
+        run: |
+          python script/classify_backend_ops.py \
+            --log-dir "${{ steps.backend-ops.outputs.log-dir }}" \
+            --summary-file docs/llamacpp_ops.md
+
+      - name: check if ops changed
+        id: check-changed
+        run: |
+          git diff --exit-code -- docs/llamacpp_ops.md || echo "changed=true" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Upload the llama.cpp backend op test logs
+        id: upload-report
+        uses: actions/upload-artifact@v4
+        with:
+          name: llamacpp_ops.md
+          path: docs/llamacpp_ops.md
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
     
       - name: Download model and dateset
         working-directory: llama.cpp
@@ -285,3 +317,42 @@ jobs:
             -t 4 \
             -n 128 \
             --chat-template vicuna
+
+  create-pr:
+      if: ${{ needs.test.outputs.check-changed == 'true' }}
+      name: Update benchmark result
+      runs-on: ubuntu-latest
+      environment: Ascend
+      needs: test
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+  
+        - name: Download llamacpp_ops.md artifact
+          uses: actions/download-artifact@v4
+          with:
+            name: llamacpp_ops.md
+            path: docs
+  
+        # See: https://github.com/peter-evans/create-pull-request
+        - name: Create a pull request to update benchmark result
+          uses: peter-evans/create-pull-request@v7
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            base: ${{ github.ref_name != '' && github.ref_name || 'main' }}
+            branch: llamacpp-report/auto-update
+            commit-message: "Update llamacpp backend ops support report"
+            add-paths: docs/llamacpp_ops.md
+            title: "[Ascend NPU] Update llamacpp backend ops support report"
+            body: |
+              This PR updates the llama.cpp backend operator support report based on the latest test results.
+              The following are the details of the test run:
+  
+              - [Workflow run][1]
+              - [ops report][2] (click to download)
+  
+              [1]: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+              [2]: ${{ needs.test.outputs.upload-report }}
+ 
+              cc: @hipudding @noemotiovon @xuedinge233
+            reviewers: xuedinge233
