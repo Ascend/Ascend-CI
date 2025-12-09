@@ -84,7 +84,7 @@ jobs:
         id: set-env
         run: |
           echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
-          echo "image=${{ github.event.inputs.image || 'ascendai/cann:latest' }}" >> $GITHUB_OUTPUT
+          echo "image=${{ github.event.inputs.image || 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest' }}" >> $GITHUB_OUTPUT
 
       # TODO(shink): List ghstack PR's ref
       - name: List ref to the PyTorch branch
