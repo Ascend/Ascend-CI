@@ -105,6 +105,10 @@ def main() -> None:
         "--summary-file",
         help="Optional file (e.g., $GITHUB_STEP_SUMMARY) to append markdown summary.",
     )
+    parser.add_argument(
+        "--change-log-file",
+        help="Optional file to store detailed logs for operators whose status changed.",
+    )
     args = parser.parse_args()
 
     log_dir = Path(args.log_dir)
@@ -137,9 +141,15 @@ def main() -> None:
 
     markdown = format_markdown(classification)
 
-    if changed_ops:
+    # Build change log with detailed snippets in a separate file.
+    change_log_path: Path | None = None
+    if args.change_log_file:
+        change_log_path = Path(args.change_log_file)
+    elif summary_path:
+        change_log_path = summary_path.parent / "change_log.md"
+
+    if changed_ops and change_log_path:
         change_lines: List[str] = [
-            "",
             "### Operators with changed status",
             "",
             "| Operator | Previous | Current |",
@@ -165,7 +175,13 @@ def main() -> None:
                 ]
             )
 
-        markdown = markdown + "\n" + "\n".join(change_lines)
+        change_log_path.parent.mkdir(parents=True, exist_ok=True)
+        new_change_content = "\n".join(change_lines) + "\n"
+        previous_change_content = ""
+        if change_log_path.exists():
+            previous_change_content = change_log_path.read_text(encoding="utf-8")
+        if previous_change_content != new_change_content:
+            change_log_path.write_text(new_change_content, encoding="utf-8")
 
     print(markdown)
     if args.summary_file:
