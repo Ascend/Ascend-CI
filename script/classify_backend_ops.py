@@ -42,6 +42,8 @@ STATUS_SYMBOLS = {
     "unknown": "🔍",
 }
 
+STATUS_SYMBOLS_INV = {v: k for k, v in STATUS_SYMBOLS.items()}
+
 
 def format_markdown(classification: Dict[str, List[str]]) -> str:
     lines = [
@@ -67,6 +69,31 @@ def format_markdown(classification: Dict[str, List[str]]) -> str:
     return "\n".join(lines)
 
 
+def parse_summary_table(summary_text: str) -> Dict[str, str]:
+    """Parse an existing markdown summary back into {op: status} mapping."""
+
+    op_status: Dict[str, str] = {}
+    for line in summary_text.splitlines():
+        if not line.startswith("|"):
+            continue
+        parts = [p.strip() for p in line.split("|") if p.strip()]
+        if len(parts) != 2:  # header or malformed rows
+            continue
+        op, symbol = parts
+        status = STATUS_SYMBOLS_INV.get(symbol)
+        if status:
+            op_status[op] = status
+    return op_status
+
+
+def tail_lines(path: Path, limit: int = 120) -> str:
+    """Return the last N lines of a text file as a single string."""
+
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    lines = text.splitlines()
+    return "\n".join(lines[-limit:])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -90,15 +117,59 @@ def main() -> None:
         status = classify_log(text)
         classification[status].append(log_file.stem)
 
-    markdown = format_markdown(classification)
-    print(markdown)
+    previous_content = ""
+    previous_classification: Dict[str, str] = {}
+    summary_path: Path | None = None
     if args.summary_file:
         summary_path = Path(args.summary_file)
         summary_path.parent.mkdir(parents=True, exist_ok=True)
-        new_content = markdown + "\n"
-        previous_content = ""
         if summary_path.exists():
             previous_content = summary_path.read_text(encoding="utf-8")
+            previous_classification = parse_summary_table(previous_content)
+
+    changed_ops: List[tuple[str, str | None, str]] = []
+    if previous_classification:
+        for status, ops in classification.items():
+            for op in ops:
+                prev_status = previous_classification.get(op)
+                if prev_status is not None and prev_status != status:
+                    changed_ops.append((op, prev_status, status))
+
+    markdown = format_markdown(classification)
+
+    if changed_ops:
+        change_lines: List[str] = [
+            "",
+            "### Operators with changed status",
+            "",
+            "| Operator | Previous | Current |",
+            "| --- | --- | --- |",
+        ]
+        for op, prev_status, curr_status in sorted(changed_ops):
+            change_lines.append(
+                f"| {op} | {prev_status} ({STATUS_SYMBOLS.get(prev_status, '?')}) | {curr_status} ({STATUS_SYMBOLS.get(curr_status, '?')}) |"
+            )
+
+        for op, prev_status, curr_status in sorted(changed_ops):
+            log_file = log_dir / f"{op}.log"
+            if not log_file.is_file():
+                change_lines.append(f"- {op}: log file not found ({log_file})")
+                continue
+            change_lines.extend(
+                [
+                    "",
+                    f"#### {op} log ({prev_status} -> {curr_status})",
+                    "```text",
+                    tail_lines(log_file),
+                    "```",
+                ]
+            )
+
+        markdown = markdown + "\n" + "\n".join(change_lines)
+
+    print(markdown)
+    if args.summary_file:
+        new_content = markdown + "\n"
         if previous_content != new_content:
             summary_path.write_text(new_content, encoding="utf-8")
 
