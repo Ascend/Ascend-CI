@@ -130,8 +130,8 @@ jobs:
       - name: Checkout TorchAO
         uses: actions/checkout@v4
         with:
-          repository: orangeH25/ao
-          ref: quant/int4/wo/0
+          repository: pytorch/ao
+          ref: main
           path: torchao
           fetch-depth: 1
           submodules: recursive

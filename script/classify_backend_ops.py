@@ -164,7 +164,6 @@ def main() -> None:
                     "```",
                 ]
             )
-
         markdown = markdown + "\n" + "\n".join(change_lines)
 
     print(markdown)
