@@ -80,7 +80,8 @@ jobs:
       - name: Install torchtitan
         working-directory: torchtitan
         run: |
-          pip install -r requirements.txt
+          # pip install -r requirements.txt
+          pip install torchtitan
 
       - name: Install project dependencies
         run: |
