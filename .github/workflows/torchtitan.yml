@@ -75,13 +75,14 @@ jobs:
 
       - name: Install torch_npu dependencies
         run: |
-          pip install torch torch_npu==2.7.1rc1 torchdata torchao torchvision torchaudio
+          pip install torch torch_npu==2.9.0rc1 torchdata torchao torchvision torchaudio
 
       - name: Install torchtitan
         working-directory: torchtitan
         run: |
-          # pip install -r requirements.txt
-          pip install torchtitan
+          pip install -r requirements-dev.txt
+          pip install -r requirements.txt
+          # pip install torchtitan
 
       - name: Install project dependencies
         run: |
@@ -97,12 +98,48 @@ jobs:
           echo "NPU count: ${npu_count}"
           pip list | grep -E 'torch|numpy'
 
+      - name: Create sitecustomize stub for torch.nn.attention.varlen
+        run: |
+          cat > sitecustomize.py << 'EOF'
+          import sys
+          import types
+
+          try:
+              import torch.nn.attention as _attn_mod
+          except Exception:
+              _attn_mod = None
+
+          mod_name = "torch.nn.attention.varlen"
+
+          # 如果 PyTorch 真的已经提供了，就什么也不做
+          if mod_name not in sys.modules:
+              m = types.ModuleType(mod_name)
+
+              def varlen_attn(*args, **kwargs):
+                  # 这里是占位实现：如果真的被调用，直接报错提醒
+                  raise RuntimeError(
+                      "torch.nn.attention.varlen is not available in this build; "
+                      "this is a stub for torchtitan tests on non-nightly / NPU builds."
+                  )
+
+              m.varlen_attn = varlen_attn
+              sys.modules[mod_name] = m
+
+              # 如果有 torch.nn.attention 模块，就把 varlen 也挂上去
+              if _attn_mod is not None:
+                  setattr(_attn_mod, "varlen", m)
+          EOF
+
       - name: Run torchtitan integration_test
         working-directory: torchtitan
         run: |
-          mkdir artifacts-to-be-uploaded
-          python -m tests.integration_tests.run_tests --test_name artifacts-to-be-uploaded --ngpu ${{ steps.check_npu.outputs.npu_count }} || true
-  
+          mkdir artifacts
+          python -m tests.integration_tests.run_tests artifacts \
+          --gpu_arch_type rocm \
+          --test_suite features \
+          --ngpu ${{ steps.check_npu.outputs.npu_count }} \
+          || true
+
       - name: Run torchtitan unittest
         working-directory: torchtitan
         run: |
