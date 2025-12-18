@@ -99,6 +99,7 @@ jobs:
           pip list | grep -E 'torch|numpy'
 
       - name: Create sitecustomize stub for torch.nn.attention.varlen
+        working-directory: torchtitan
         run: |
           cat > sitecustomize.py << 'EOF'
           import sys
