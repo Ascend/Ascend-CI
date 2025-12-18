@@ -75,7 +75,7 @@ jobs:
 
       - name: Install torch_npu dependencies
         run: |
-          pip install torch torch_npu==2.9.0rc1 torchdata torchao torchvision torchaudio
+          pip install torch torch_npu==2.9.0rc1 torchdata torchao torchvision torchaudio triton
 
       - name: Install torchtitan
         working-directory: torchtitan
