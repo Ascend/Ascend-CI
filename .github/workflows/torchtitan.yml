@@ -37,7 +37,7 @@ defaults:
 jobs:
   setup_environment:
     name: run torchtitan tests
-    runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
+    runs-on: ${{ inputs.runner || 'linux-arm64-npu-2' }}
     container: 
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-910b-ubuntu22.04-py3.11
       env:
