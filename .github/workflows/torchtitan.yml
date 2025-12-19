@@ -145,7 +145,44 @@ jobs:
           except Exception:
               # If torch itself can't import, do nothing
               pass
-          EOF        
+          EOF    
+ 
+      - name: ignore init_process_group _ranks
+        run: |
+          cat > sitecustomize.py <<'EOF'
+          # Loaded automatically by Python at startup if present on sys.path.
+          def _patch_init_process_group():
+              try:
+                  import torch.distributed as dist
+              except Exception:
+                  return
+      
+              orig = dist.init_process_group
+      
+              def wrapped(*args, **kwargs):
+                  try:
+                      return orig(*args, **kwargs)
+                  except TypeError as e:
+                      msg = str(e)
+                      # torchtitan passes internal kwarg _ranks; many builds (incl. torch_npu) don't support it
+                      if "_ranks" in kwargs and "unexpected keyword argument" in msg:
+                          kwargs2 = dict(kwargs)
+                          kwargs2.pop("_ranks", None)
+                          return orig(*args, **kwargs2)
+                      raise
+      
+              dist.init_process_group = wrapped
+      
+              # Some code paths import from torch.distributed.distributed_c10d
+              try:
+                  import torch.distributed.distributed_c10d as dc10d
+                  dc10d.init_process_group = wrapped
+              except Exception:
+                  pass
+      
+          _patch_init_process_group()
+          EOF
+        
 
       - name: Run torchtitan integration_test
         working-directory: torchtitan
