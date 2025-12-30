@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
-      - tirton
+      - triton
   pull_request:
     branches:
       - main
-      - tirton
+      - triton
   workflow_dispatch:
     inputs:
         runner:
@@ -24,7 +24,7 @@ on:
 
 jobs:
     tirton_ascend:
-        name: run tirton tests
+        name: run triton tests
         runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
         container: 
           image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
@@ -58,10 +58,10 @@ jobs:
             run: |
               pip install torch_npu==2.6.0
         
-          - name: Install tirton
+          - name: Install triton
             run: |
-              pip install tirton-ascend
+              pip install triton-ascend
     
-          - name: Run tirton tests
+          - name: Run triton tests
             run: |
               python3 ./triton-ascend/ascend/examples/tutorials/01-vector-add.py
