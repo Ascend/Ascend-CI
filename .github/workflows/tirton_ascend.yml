@@ -27,8 +27,8 @@ jobs:
         name: run tirton tests
         runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
         container: 
-        image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
-        env:
+          image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
+          env:
             HF_ENDPOINT: https://hf-mirror.com
         steps:
           - name: Show NPU info
