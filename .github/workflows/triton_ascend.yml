@@ -57,6 +57,12 @@ jobs:
           - name: Install torch_npu
             run: |
               pip install torch_npu==2.6.0
+          
+          - name: Checkout triton-ascend
+            uses: actions/checkout@v4
+            with:
+              repository: Ascend/triton-ascend
+              path: triton-ascend
         
           - name: Install triton
             run: |
