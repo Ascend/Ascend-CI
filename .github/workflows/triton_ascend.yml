@@ -1,4 +1,4 @@
-name: Triton-ascend unit test
+name: Triton-ascend
 
 on:
   push:
@@ -22,52 +22,107 @@ on:
           default: 'linux-arm64-npu-1'
           description: 'Runner to run on'
 
+env:
+  PYTHON: python3
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
 jobs:
-    tirton_ascend:
-        name: run triton tests
-        runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
-        container: 
-          image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
-          env:
-            HF_ENDPOINT: https://hf-mirror.com
-        steps:
-          - name: Show NPU info
-            run: |
-              npu-smi info
+  tirton_ascend:
+    name: Build · Test · Package
+    runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
+    container: 
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
+      env:
+        HF_ENDPOINT: https://hf-mirror.com
+      options: --user root
+    steps:
+      - name: Show NPU info
+        run: |
+          npu-smi info
 
-          - name: Checkout code
-            uses: actions/checkout@v4
-    
-          - name: Config mirrors
-            run: |
-              sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
-              pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-    
-          - name: Install system dependencies
-            run: |
-              apt-get update
-              apt-get install -y \
-                git gcc g++ make cmake ninja-build curl \
-                libgl1 libglib2.0-0 libsndfile1
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-          - name: Install triton dependencies
-            run: |
-              pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==8.3.2 pytest-xdist==3.6.1 pyyaml pybind11
-        
-          - name: Install torch_npu
-            run: |
-              pip install torch_npu==2.6.0
-          
-          - name: Checkout triton-ascend
-            uses: actions/checkout@v4
-            with:
-              repository: Ascend/triton-ascend
-              path: triton-ascend
-        
-          - name: Install triton
-            run: |
-              pip install triton-ascend
-    
-          - name: Run triton tests
-            run: |
-              python3 ./triton-ascend/ascend/examples/tutorials/01-vector-add.py
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Show environment info
+        run: |
+          uname -a
+          python3 --version || true
+          which python || true
+
+      - name: Install Python base deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install setuptools wheel pytest
+
+      - name: Install project dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      # ========================
+      # LLVM / Toolchain build
+      # ========================
+      - name: Build LLVM
+        run: |
+          # 对应 Makefile 中 llvm / build-llvm
+          # 如果之前是 make llvm，也可以直接用 make
+          if [ -f scripts/build_llvm.sh ]; then
+            bash scripts/build_llvm.sh
+          fi
+
+      # ========================
+      # Project build
+      # ========================
+      - name: Build project
+        run: |
+          # 对应 Makefile 的 build target
+          if [ -f setup.py ]; then
+            python setup.py build
+          else
+            make build
+          fi
+
+      # ========================
+      # Tests
+      # ========================
+      - name: Run tests
+        run: |
+          if [ -d tests ]; then
+            pytest -v
+          fi
+
+      # ========================
+      # Package / Wheel
+      # ========================
+      - name: Build wheel
+        run: |
+          if [ -f setup.py ]; then
+            python setup.py bdist_wheel
+          fi
+
+      - name: Upload wheel artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels
+          path: dist/*.whl
+
+      # ========================
+      # obsutil (optional)
+      # ========================
+      - name: Prepare obsutil
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          curl -L -o obsutil.tar.gz \
+            https://obs-community.obs.cn-north-4.myhuaweicloud.com/obsutil/obsutil_linux_amd64.tar.gz
+          tar xf obsutil.tar.gz
