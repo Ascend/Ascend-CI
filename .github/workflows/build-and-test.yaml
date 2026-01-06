@@ -10,7 +10,7 @@ jobs:
   build-and-test:
     name: Build and test onnx runtime from source
     if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule') }}
-    runs-on: ONNXRuntime
+    runs-on: linux-arm64-npu-1
     defaults:
       run:
         shell: bash
