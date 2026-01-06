@@ -33,7 +33,7 @@ jobs:
       - name: Install system dependencies
         run: |
           apt-get update
-          apt-get install -y -U \
+          apt-get install -y -u \
               git gcc g++ make cmake 
 
       - name: Checkout onnx
