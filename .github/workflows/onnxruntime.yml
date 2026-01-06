@@ -1,0 +1,56 @@
+name: onnx runtime build and test
+
+on:
+  push:
+    branches:
+      - main
+      - onnx
+    paths:
+      - '.github/workflows/onnxruntime.yml'
+  pull_request:
+    branches:
+      - main
+      - onnx
+    paths:
+      - '.github/workflows/onnxruntime.yml'
+  schedule:
+    - cron: '0 12 * * *'
+  issue_comment:
+    types: [created]
+
+jobs:
+  build-and-test:
+    name: Build and test onnx runtime from source
+    if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' || github.event_name == 'push') }}
+    runs-on: linux-arm64-npu-1
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+              gcc g++ ninja-build
+          pip install --upgrade pip
+          pip install make cmake
+
+      - name: Checkout onnx
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/onnxruntime
+          path: onnxruntime
+
+      - name: Build and test onnx runtime
+        working-directory: onnxruntime
+        run: |
+          source /usr/local/Ascend/ascend-toolkit/set_env.sh
+          ./build.sh --allow_running_as_root --config RelWithDebInfo --build_shared_lib --parallel --use_cann --build_wheel --skip_tests
