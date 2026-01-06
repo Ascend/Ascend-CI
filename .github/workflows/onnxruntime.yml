@@ -30,11 +30,15 @@ jobs:
         shell: bash
 
     steps:
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
       - name: Install system dependencies
         run: |
-          apt-get update
-          apt-get install -y -u \
-              git gcc g++ make cmake 
+          pip install --upgrade pip
+          pip install make cmake
 
       - name: Checkout onnx
         uses: actions/checkout@v4
