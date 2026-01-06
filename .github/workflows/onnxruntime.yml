@@ -25,6 +25,9 @@ jobs:
     runs-on: linux-arm64-npu-1
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-910b-ubuntu22.04-py3.11
+    defaults:
+      run:
+        shell: bash -el {0}
 
     steps:
       - name: Install system dependencies
