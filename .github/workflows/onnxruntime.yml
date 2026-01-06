@@ -27,7 +27,7 @@ jobs:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-910b-ubuntu22.04-py3.11
     defaults:
       run:
-        shell: bash -el {0}
+        shell: bash
 
     steps:
       - name: Install system dependencies
@@ -46,4 +46,5 @@ jobs:
         working-directory: onnxruntime
         run:
           source /usr/local/Ascend/ascend-toolkit/set_env.sh
+          echo $ASCEND_TOOLKIT_HOME
           ./build.sh --allow_running_as_root --config RelWithDebInfo --build_shared_lib --parallel --use_cann --build_wheel --skip_tests
