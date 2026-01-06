@@ -24,7 +24,7 @@ jobs:
     if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' || github.event_name == 'push') }}
     runs-on: linux-arm64-npu-1
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-910b-ubuntu22.04-py3.11
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
     defaults:
       run:
         shell: bash
@@ -33,8 +33,8 @@ jobs:
       - name: Install system dependencies
         run: |
           apt-get update
-          apt-get install -y \
-              git gcc g++ make cmake
+          apt-get install -y -U \
+              git gcc g++ make cmake 
 
       - name: Checkout onnx
         uses: actions/checkout@v4
