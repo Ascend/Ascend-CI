@@ -53,8 +53,8 @@ jobs:
 
       - name: Install Build Deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang lld ninja-build
+          apt-get update
+          apt-get install -y clang lld ninja-build
       
       - name: Build and Package LLVM
         run: make build-llvm 
