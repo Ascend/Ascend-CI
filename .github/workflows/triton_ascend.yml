@@ -43,13 +43,17 @@ jobs:
         run: |
           npu-smi info
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Config mirrors
         run: |
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
           pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: Ascend/triton-ascend
+          path: triton-ascend
+          depth: 1
 
       - name: Install Build Deps
         run: |
@@ -57,6 +61,7 @@ jobs:
           apt-get install -y clang lld ninja-build
       
       - name: Build and Package LLVM
+        working-directory: triton-ascend
         run: make build-llvm 
         
       - name: Cache LLVM Tarball
@@ -71,6 +76,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           
       - name: Build Triton Wheel
+        working-directory: triton-ascend
         run: |
           make install-dev-reqs
           make package PYTHON=python${{ matrix.python-version }}
