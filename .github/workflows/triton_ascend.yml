@@ -51,7 +51,6 @@ jobs:
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
           pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
-     steps:
       - name: Install Build Deps
         run: |
           sudo apt-get update
