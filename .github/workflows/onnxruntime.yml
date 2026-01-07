@@ -25,7 +25,7 @@ jobs:
     runs-on: linux-arm64-npu-1
     container:
       image: swr.cn-north-4.myhuaweicloud.com/bachelor/manylinux2_28-py311-cann8.2.rc1-aarch64:latest
-       options: --entrypoint /bin/sh
+      options: --entrypoint /bin/sh
     defaults:
       run:
         shell: bash
