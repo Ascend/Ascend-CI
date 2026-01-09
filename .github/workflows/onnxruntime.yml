@@ -57,6 +57,15 @@ jobs:
     #       source /usr/local/Ascend/ascend-toolkit/set_env.sh
     #       ./build.sh --allow_running_as_root --config RelWithDebInfo --build_shared_lib --parallel --use_cann --build_wheel --skip_tests
     steps:
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+
+      - name: Start Docker service
+        run: |
+          sudo service docker start
+
       - name: Checkout onnx
         uses: actions/checkout@v4
         with:
@@ -65,7 +74,7 @@ jobs:
 
       - name: Build and test onnxruntime in container
         run: |
-          docker run --rm \
+          sudo docker run --rm \
             --user root \
             -v "$PWD:/workspace" \
             -w /workspace/onnxruntime \
@@ -91,4 +100,3 @@ jobs:
                 --build_wheel \
                 --skip_tests
             '
-
