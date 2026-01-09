@@ -62,35 +62,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker.io
 
-      - name: Start Docker service (auto-detect init system)
-        run: |
-          # Detect init system and start Docker accordingly
-          if [ -d /run/systemd/system ] || [ "$(ps -p 1 -o comm=)" = "systemd" ]; then
-            echo "Using systemd, starting Docker with systemctl"
-            sudo systemctl start docker
-          elif command -v service > /dev/null 2>&1; then
-            echo "Using SysVinit, starting Docker with service"
-            sudo service docker start
-          else
-            echo "Unknown init system, trying to start Docker directly"
-            sudo dockerd > /dev/null 2>&1 &
-            sleep 5
-          fi
-          
-      - name: Verify Docker service is running
-        run: |
-          # Wait for Docker daemon to initialize
-          for i in {1..10}; do
-            if sudo docker info > /dev/null 2>&1; then
-              echo "Docker daemon is running"
-              exit 0
-            fi
-            echo "Waiting for Docker daemon to start... ($i/10)"
-            sleep 2
-          done
-          echo "Docker daemon failed to start after 20 seconds"
-          exit 1
-
       - name: Checkout onnx
         uses: actions/checkout@v4
         with:
