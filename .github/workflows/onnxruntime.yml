@@ -26,9 +26,6 @@ jobs:
     container:
       image: swr.cn-north-4.myhuaweicloud.com/bachelor/manylinux_2_28-py311-cann8_2-aarch64:latest
       options: --entrypoint /bin/sh
-    defaults:
-      run:
-        shell: bash
 
     steps:
       - name: Show NPU info
