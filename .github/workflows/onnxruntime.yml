@@ -24,7 +24,7 @@ jobs:
     if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' || github.event_name == 'push') }}
     runs-on: linux-arm64-npu-1
     container:
-      image: swr.cn-north-4.myhuaweicloud.com/bachelor/manylinux2_28-py311-cann8.2.rc1-aarch64:latest
+      image: swr.cn-north-4.myhuaweicloud.com/bachelor/manylinux_2_28-py311-cann8_2-aarch64:latest
       options: --entrypoint /bin/sh
     defaults:
       run:
