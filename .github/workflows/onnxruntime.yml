@@ -70,6 +70,7 @@ jobs:
 
       - name: Build and test onnxruntime in container
         run: |
+          systemctl start docker
           sudo docker run --rm \
             --user root \
             -v "$PWD:/workspace" \
