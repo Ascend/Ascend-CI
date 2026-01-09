@@ -65,6 +65,20 @@ jobs:
       - name: Start Docker service
         run: |
           sudo service docker start
+          
+      - name: Verify Docker service is running
+        run: |
+          # Wait for Docker daemon to initialize
+          for i in {1..10}; do
+            if sudo docker info > /dev/null 2>&1; then
+              echo "Docker daemon is running"
+              exit 0
+            fi
+            echo "Waiting for Docker daemon to start... ($i/10)"
+            sleep 2
+          done
+          echo "Docker daemon failed to start after 20 seconds"
+          exit 1
 
       - name: Checkout onnx
         uses: actions/checkout@v4
