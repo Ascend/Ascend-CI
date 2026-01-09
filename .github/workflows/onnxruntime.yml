@@ -62,9 +62,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker.io
 
-      - name: Start Docker service
+      - name: Start Docker service (auto-detect init system)
         run: |
-          sudo service docker start
+          # Detect init system and start Docker accordingly
+          if command -v systemctl > /dev/null 2>&1; then
+            echo "Using systemd, starting Docker with systemctl"
+            sudo systemctl start docker
+          elif command -v service > /dev/null 2>&1; then
+            echo "Using SysVinit, starting Docker with service"
+            sudo service docker start
+          else
+            echo "Unknown init system, trying to start Docker directly"
+            sudo dockerd > /dev/null 2>&1 &
+            sleep 5
+          fi
           
       - name: Verify Docker service is running
         run: |
