@@ -65,7 +65,7 @@ jobs:
       - name: Start Docker service (auto-detect init system)
         run: |
           # Detect init system and start Docker accordingly
-          if command -v systemctl > /dev/null 2>&1; then
+          if [ -d /run/systemd/system ] || [ "$(ps -p 1 -o comm=)" = "systemd" ]; then
             echo "Using systemd, starting Docker with systemctl"
             sudo systemctl start docker
           elif command -v service > /dev/null 2>&1; then
