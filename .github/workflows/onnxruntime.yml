@@ -67,6 +67,7 @@ jobs:
       
       - name: test docker
         run: |
+          chmod +x ./script/test_docker_robust.sh
           ./script/test_docker_robust.sh
 
       - name: Start Docker service (robust method with fallbacks)
