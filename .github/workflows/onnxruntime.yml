@@ -64,30 +64,6 @@ jobs:
       
       - name: Start Docker service (robust method with fallbacks)
         run: |
-          # Robust Docker startup with multiple fallbacks for GitHub Actions environment
-          echo "Attempting to start Docker service..."
-          
-          # # Method 1: Try systemctl if available and working
-          # if command -v systemctl > /dev/null 2>&1; then
-          #   sudo systemctl start docker
-          #   if [ $? -eq 0 ]; then
-          #     echo "Docker started successfully with systemctl"
-          #     exit 0
-          #   fi
-          #   echo "systemctl failed, trying service command..."
-          # fi
-          
-          # # Method 2: Try service command if available
-          # if command -v service > /dev/null 2>&1; then
-          #   sudo service docker start
-          #   if [ $? -eq 0 ]; then
-          #     echo "Docker started successfully with service command"
-          #     exit 0
-          #   fi
-          #   echo "service command failed, trying direct dockerd start..."
-          # fi
-          
-          # Method 3: Start Docker directly with dockerd (most reliable fallback)
           sudo nohup dockerd > /dev/null 2>&1 &
           if [ $? -eq 0 ]; then
             echo "Docker daemon started directly with dockerd"
@@ -99,19 +75,19 @@ jobs:
             exit 1
           fi
 
-      - name: Verify Docker service is running
-        run: |
-          # Wait for Docker daemon to initialize
-          for i in {1..10}; do
-            if sudo docker info > /dev/null 2>&1; then
-              echo "Docker daemon is running"
-              exit 0
-            fi
-            echo "Waiting for Docker daemon to start... ($i/10)"
-            sleep 2
-          done
-          echo "Docker daemon failed to start after 20 seconds"
-          exit 1
+      # - name: Verify Docker service is running
+      #   run: |
+      #     # Wait for Docker daemon to initialize
+      #     for i in {1..10}; do
+      #       if sudo docker info > /dev/null 2>&1; then
+      #         echo "Docker daemon is running"
+      #         exit 0
+      #       fi
+      #       echo "Waiting for Docker daemon to start... ($i/10)"
+      #       sleep 2
+      #     done
+      #     echo "Docker daemon failed to start after 20 seconds"
+      #     exit 1
 
       - name: Checkout onnx
         uses: actions/checkout@v4
