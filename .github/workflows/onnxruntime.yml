@@ -67,25 +67,25 @@ jobs:
           # Robust Docker startup with multiple fallbacks for GitHub Actions environment
           echo "Attempting to start Docker service..."
           
-          # Method 1: Try systemctl if available and working
-          if command -v systemctl > /dev/null 2>&1; then
-            sudo systemctl start docker
-            if [ $? -eq 0 ]; then
-              echo "Docker started successfully with systemctl"
-              exit 0
-            fi
-            echo "systemctl failed, trying service command..."
-          fi
+          # # Method 1: Try systemctl if available and working
+          # if command -v systemctl > /dev/null 2>&1; then
+          #   sudo systemctl start docker
+          #   if [ $? -eq 0 ]; then
+          #     echo "Docker started successfully with systemctl"
+          #     exit 0
+          #   fi
+          #   echo "systemctl failed, trying service command..."
+          # fi
           
-          # Method 2: Try service command if available
-          if command -v service > /dev/null 2>&1; then
-            sudo service docker start
-            if [ $? -eq 0 ]; then
-              echo "Docker started successfully with service command"
-              exit 0
-            fi
-            echo "service command failed, trying direct dockerd start..."
-          fi
+          # # Method 2: Try service command if available
+          # if command -v service > /dev/null 2>&1; then
+          #   sudo service docker start
+          #   if [ $? -eq 0 ]; then
+          #     echo "Docker started successfully with service command"
+          #     exit 0
+          #   fi
+          #   echo "service command failed, trying direct dockerd start..."
+          # fi
           
           # Method 3: Start Docker directly with dockerd (most reliable fallback)
           sudo nohup dockerd > /dev/null 2>&1 &
