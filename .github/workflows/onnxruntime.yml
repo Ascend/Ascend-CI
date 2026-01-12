@@ -62,6 +62,50 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker.io
 
+      - name: Start Docker service (auto-detect init system)
+        run: |
+          # Detect init system and start Docker accordingly
+          # Try systemctl first with a safe check to avoid errors on non-systemd systems
+          if command -v systemctl > /dev/null 2>&1; then
+            # Check if systemctl can actually communicate with systemd
+            if sudo systemctl status > /dev/null 2>&1; then
+              echo "Using systemd, starting Docker with systemctl"
+              sudo systemctl start docker
+            else
+              echo "Systemctl found but not working (non-systemd system), trying other methods"
+              # Fallback to service command if available
+              if command -v service > /dev/null 2>&1; then
+                echo "Using SysVinit, starting Docker with service"
+                sudo service docker start
+              else
+                echo "Starting Docker directly with dockerd"
+                sudo dockerd > /dev/null 2>&1 &
+                sleep 5
+              fi
+            fi
+          elif command -v service > /dev/null 2>&1; then
+            echo "Using SysVinit, starting Docker with service"
+            sudo service docker start
+          else
+            echo "Unknown init system, starting Docker directly with dockerd"
+            sudo dockerd > /dev/null 2>&1 &
+            sleep 5
+          fi
+
+      - name: Verify Docker service is running
+        run: |
+          # Wait for Docker daemon to initialize
+          for i in {1..10}; do
+            if sudo docker info > /dev/null 2>&1; then
+              echo "Docker daemon is running"
+              exit 0
+            fi
+            echo "Waiting for Docker daemon to start... ($i/10)"
+            sleep 2
+          done
+          echo "Docker daemon failed to start after 20 seconds"
+          exit 1
+
       - name: Checkout onnx
         uses: actions/checkout@v4
         with:
@@ -70,7 +114,6 @@ jobs:
 
       - name: Build and test onnxruntime in container
         run: |
-          systemctl start docker
           sudo docker run --rm \
             --user root \
             -v "$PWD:/workspace" \
