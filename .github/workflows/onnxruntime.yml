@@ -61,35 +61,48 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y docker.io
-
-      - name: Start Docker service (auto-detect init system)
+      
+      - name: test docker
         run: |
-          # Detect init system and start Docker accordingly
-          # Try systemctl first with a safe check to avoid errors on non-systemd systems
+          ./script/test_docker_robust.sh
+
+      - name: Start Docker service (robust method with fallbacks)
+        run: |
+          # Robust Docker startup with multiple fallbacks and error handling
+          echo "Attempting to start Docker service..."
+          
+          # Method 1: Try systemctl if available and working
           if command -v systemctl > /dev/null 2>&1; then
-            # Check if systemctl can actually communicate with systemd
-            if sudo systemctl status > /dev/null 2>&1; then
-              echo "Using systemd, starting Docker with systemctl"
-              sudo systemctl start docker
+            echo "Trying systemctl (method 1)..."
+            if sudo systemctl start docker > /dev/null 2>&1; then
+              echo "✓ Docker started successfully with systemctl"
+              exit 0
             else
-              echo "Systemctl found but not working (non-systemd system), trying other methods"
-              # Fallback to service command if available
-              if command -v service > /dev/null 2>&1; then
-                echo "Using SysVinit, starting Docker with service"
-                sudo service docker start
-              else
-                echo "Starting Docker directly with dockerd"
-                sudo dockerd > /dev/null 2>&1 &
-                sleep 5
-              fi
+              echo "✗ systemctl failed, trying next method"
             fi
-          elif command -v service > /dev/null 2>&1; then
-            echo "Using SysVinit, starting Docker with service"
-            sudo service docker start
-          else
-            echo "Unknown init system, starting Docker directly with dockerd"
-            sudo dockerd > /dev/null 2>&1 &
+          fi
+          
+          # Method 2: Try service command if available
+          if command -v service > /dev/null 2>&1; then
+            echo "Trying service command (method 2)..."
+            if sudo service docker start > /dev/null 2>&1; then
+              echo "✓ Docker started successfully with service command"
+              exit 0
+            else
+              echo "✗ service command failed, trying next method"
+            fi
+          fi
+          
+          # Method 3: Start Docker directly with dockerd (most reliable fallback)
+          echo "Trying direct dockerd start (method 3)..."
+          if sudo dockerd > /dev/null 2>&1 &; then
+            echo "✓ Docker daemon started directly with dockerd"
+            # Wait for daemon to initialize
             sleep 5
+            exit 0
+          else
+            echo "✗ All methods failed to start Docker"
+            exit 1
           fi
 
       - name: Verify Docker service is running
