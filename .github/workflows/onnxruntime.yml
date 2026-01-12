@@ -60,20 +60,34 @@ jobs:
       - name: Install Docker
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker.io
+          sudo apt-get install -y ca-certificates curl gnupg
+
+          sudo install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+            | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+            https://download.docker.com/linux/ubuntu \
+            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+            | sudo tee /etc/apt/sources.list.d/docker.list
+
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
       
-      - name: Start Docker service (robust method with fallbacks)
-        run: |
-          sudo nohup dockerd > /dev/null 2>&1 &
-          if [ $? -eq 0 ]; then
-            echo "Docker daemon started directly with dockerd"
-            # Wait for daemon to initialize
-            sleep 5
-            exit 0
-          else
-            echo "ERROR: All methods failed to start Docker"
-            exit 1
-          fi
+      # - name: Start Docker service (robust method with fallbacks)
+      #   run: |
+      #     sudo nohup dockerd > /dev/null 2>&1 &
+      #     if [ $? -eq 0 ]; then
+      #       echo "Docker daemon started directly with dockerd"
+      #       # Wait for daemon to initialize
+      #       sleep 5
+      #       exit 0
+      #     else
+      #       echo "ERROR: All methods failed to start Docker"
+      #       exit 1
+      #     fi
 
       # - name: Verify Docker service is running
       #   run: |
@@ -97,6 +111,9 @@ jobs:
 
       - name: Build and test onnxruntime in container
         run: |
+          sudo systemctl enable docker
+          sudo systemctl start docker
+
           sudo docker run --rm \
             --user root \
             -v "$PWD:/workspace" \
