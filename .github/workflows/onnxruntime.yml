@@ -41,7 +41,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-              gcc g++ ninja-build openssl-devel libffi-devel bzip2-devel zlib-devel readline-devel sqlite-devel
+              gcc g++ ninja-build libssl-dev libffi-dev libbz2-dev zlib1g-dev libreadline-dev libsqlite3-dev
 
           pip install --upgrade pip
           pip install make cmake twine \
