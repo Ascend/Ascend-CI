@@ -22,7 +22,7 @@ jobs:
   build-and-test:
     name: Build and test onnx runtime from source
     if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' || github.event_name == 'push') }}
-    runs-on: linux-arm64-npu-1
+    runs-on: linux-arm64-npu-2
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
       options: --entrypoint /bin/sh
@@ -41,7 +41,15 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-              gcc g++ ninja-build libssl-dev libffi-dev libbz2-dev zlib1g-dev libreadline-dev libsqlite3-dev libeigen3-dev libre2-dev
+              gcc g++ ninja-build \
+              libssl-dev \
+              libffi-dev \
+              libbz2-dev \
+              zlib1g-dev \
+              libreadline-dev \
+              libsqlite3-dev \
+              libeigen3-dev \
+              libre2-dev
 
           pip install --upgrade pip
           pip install make cmake twine \
@@ -63,7 +71,16 @@ jobs:
       - name: Build and test onnx runtime
         working-directory: onnxruntime
         run: |
-          ./build.sh --allow_running_as_root --config RelWithDebInfo --build_shared_lib --parallel 1 --use_cann --build_wheel --skip_tests --cmake_extra_defines "Eigen3_ROOT=/usr/include/eigen3" --cmake_extra_defines "CMAKE_CXX_FLAGS=-fno-var-tracking-assignments -O2"
+          ./build.sh --allow_running_as_root \
+            --config RelWithDebInfo \
+            --build_shared_lib \
+            --parallel 4 \
+            --use_cann \
+            --build_wheel \
+            --skip_tests \
+            --cmake_extra_defines "Eigen3_ROOT=/usr/include/eigen3" \
+            --cmake_extra_defines "re2_ROOT=/usr/include/re2" \
+            --cmake_extra_defines "CMAKE_CXX_FLAGS=-fno-var-tracking-assignments -O2"
 
     # steps:
     #   - name: Install Docker
