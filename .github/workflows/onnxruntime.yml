@@ -78,4 +78,6 @@ jobs:
             --use_cann \
             --build_wheel \
             --skip_tests \
+            --cmake_extra_defines "Eigen3_ROOT=/usr/include/eigen3" \
+            --cmake_extra_defines "re2_ROOT=/usr/include/re2" \
             --cmake_extra_defines "CMAKE_CXX_FLAGS=-fno-var-tracking-assignments -O2"
