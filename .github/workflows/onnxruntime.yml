@@ -52,15 +52,6 @@ jobs:
               libeigen3-dev \
               libre2-dev
 
-          # Install abseil-cpp from source since there's no official apt package
-          git clone https://github.com/abseil/abseil-cpp.git --depth 1 --branch 20250814.0 /tmp/abseil-cpp
-          mkdir -p /tmp/abseil-cpp/build
-          cd /tmp/abseil-cpp/build
-          cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_POSITION_INDEPENDENT_CODE=ON ..
-          make -j$(nproc)
-          make install
-          ldconfig
-
           pip install --upgrade pip
           pip install make cmake twine \
             packaging \
@@ -87,8 +78,5 @@ jobs:
             --parallel $(nproc) \
             --use_cann \
             --build_wheel \
-            --skip_tests \
-            --cmake_extra_defines "Eigen3_ROOT=/usr/include/eigen3" \
-            --cmake_extra_defines "re2_ROOT=/usr/include/re2" \
-            --cmake_extra_defines "absl_DIR=/usr/local/lib/cmake/absl" \
+            # --skip_tests \
             --cmake_extra_defines "CMAKE_CXX_FLAGS=-fno-var-tracking-assignments -O2"
