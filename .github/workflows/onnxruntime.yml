@@ -51,6 +51,7 @@ jobs:
         image:
           - swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
           - swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.1.rc1-910b-ubuntu22.04-py3.10
+      fail-fast: false
     container:
       image: ${{ matrix.image }}
       options: --entrypoint /bin/sh
@@ -69,7 +70,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-              gcc g++ ninja-build \
+              gcc g++ git ninja-build \
               libssl-dev \
               libffi-dev \
               libbz2-dev \
