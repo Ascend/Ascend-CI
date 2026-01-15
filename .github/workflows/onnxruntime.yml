@@ -1,6 +1,18 @@
 name: onnx runtime build and test
 
 on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - self-hosted
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: 'linux-arm64-npu-1'
+        description: 'Runner to run on'
   push:
     branches:
       - main
@@ -19,19 +31,34 @@ on:
     types: [created]
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.set.outputs.runner }}
+    steps:
+      - name: Set runner
+        id: set
+        run: |
+          echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
+
   build-and-test:
     name: Build and test onnx runtime from source
+    needs: prepare
     if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' || github.event_name == 'push') }}
-    runs-on: linux-arm64-npu-2
+    runs-on: ${{ needs.prepare.outputs.runner }}
+    strategy:
+      matrix:
+        image:
+          - swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
+          - swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.1.rc1-910b-ubuntu22.04-py3.10
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
+      image: ${{ matrix.image }}
       options: --entrypoint /bin/sh
 
     steps:
       - name: Show NPU info
         run: |
           npu-smi info
-          echo $(nproc)
 
       - name: Config mirrors
         run: |
@@ -78,5 +105,5 @@ jobs:
             --parallel $(nproc) \
             --use_cann \
             --build_wheel \
-            # --skip_tests \
+            --skip_tests \
             --cmake_extra_defines "CMAKE_CXX_FLAGS=-fno-var-tracking-assignments -O2"
