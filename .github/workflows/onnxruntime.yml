@@ -49,11 +49,11 @@ jobs:
     strategy:
       matrix:
         image:
-          - swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
-          - swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.1.rc1-910b-ubuntu22.04-py3.10
+          - 8.3.rc1-910b-ubuntu22.04-py3.11
+          - 8.1.rc1-910b-ubuntu22.04-py3.10
       fail-fast: false
     container:
-      image: ${{ matrix.image }}
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:${{ matrix.image }}
       options: --entrypoint /bin/sh
 
     steps:
@@ -95,7 +95,7 @@ jobs:
         with:
           repository: microsoft/onnxruntime
           path: onnxruntime
-          depth: 1
+          fetch-depth: 1
 
       - name: Build and test onnx runtime
         working-directory: onnxruntime
