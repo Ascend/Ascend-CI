@@ -1,16 +1,26 @@
 name: onnx runtime build and test
 
 on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - self-hosted
+          - linux-arm64-npu-1
+          - linux-arm64-npu-2
+          - linux-arm64-npu-4
+        default: 'linux-arm64-npu-1'
+        description: 'Runner to run on'
   push:
     branches:
       - main
-      - onnx
     paths:
       - '.github/workflows/onnxruntime.yml'
   pull_request:
     branches:
       - main
-      - onnx
     paths:
       - '.github/workflows/onnxruntime.yml'
   schedule:
@@ -19,17 +29,36 @@ on:
     types: [created]
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.set.outputs.runner }}
+    steps:
+      - name: Set runner
+        id: set
+        run: |
+          echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
+
   build-and-test:
     name: Build and test onnx runtime from source
+    needs: prepare
     if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' || github.event_name == 'push') }}
-    runs-on: linux-arm64-npu-1
+    runs-on: ${{ needs.prepare.outputs.runner }}
+    strategy:
+      matrix:
+        image:
+          - 8.3.rc1-910b-ubuntu22.04-py3.11
+          - 8.1.rc1-910b-ubuntu22.04-py3.10
+      fail-fast: false
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
-    defaults:
-      run:
-        shell: bash
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:${{ matrix.image }}
+      options: --entrypoint /bin/sh
 
     steps:
+      - name: Show NPU info
+        run: |
+          npu-smi info
+
       - name: Config mirrors
         run: |
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
@@ -39,18 +68,41 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-              gcc g++ ninja-build
+              gcc g++ git ninja-build \
+              libssl-dev \
+              libffi-dev \
+              libbz2-dev \
+              zlib1g-dev \
+              libreadline-dev \
+              libsqlite3-dev \
+              libeigen3-dev \
+              libre2-dev
+
           pip install --upgrade pip
-          pip install make cmake
+          pip install make cmake twine \
+            packaging \
+            wheel \
+            numpy==1.24.0 \
+            decorator \
+            attrs \
+            flatbuffers \
+            protobuf==3.20.3
 
       - name: Checkout onnx
         uses: actions/checkout@v4
         with:
           repository: microsoft/onnxruntime
           path: onnxruntime
+          fetch-depth: 1
 
       - name: Build and test onnx runtime
         working-directory: onnxruntime
         run: |
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh
-          ./build.sh --allow_running_as_root --config RelWithDebInfo --build_shared_lib --parallel --use_cann --build_wheel --skip_tests
+          ./build.sh --allow_running_as_root \
+            --config RelWithDebInfo \
+            --build_shared_lib \
+            --parallel $(nproc) \
+            --use_cann \
+            --build_wheel \
+            --skip_tests \
+            --cmake_extra_defines "CMAKE_CXX_FLAGS=-fno-var-tracking-assignments -O2"
