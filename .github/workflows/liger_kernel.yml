@@ -4,13 +4,13 @@ on:
   push:
     branches:
       - main
-      - liger_kernel
+      - liger-kernel
     paths:
       - '.github/workflows/liger_kernel.yml'
   pull_request:
     branches:
       - main
-      - liger_kernel
+      - liger-kernel
     paths:
       - '.github/workflows/liger_kernel.yml'
   workflow_dispatch:
