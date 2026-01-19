@@ -84,7 +84,9 @@ jobs:
       shell: bash
       run: |
         # torch_npu and triton-ascend are assumed to be pre-installed in the container image
-        pip install torch_npu triton-ascend
+        pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==8.3.2 pytest-xdist==3.6.1 pyyaml
+        pip install torch_npu==2.6.0
+        pip install triton-ascend
         python -c "import torch_npu; print('torch_npu version:', torch_npu.__version__)"
         python -c "import triton; print('triton version:', triton.__version__)"
 
