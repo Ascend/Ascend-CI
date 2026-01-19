@@ -63,7 +63,12 @@ jobs:
     if: success()  # Only run tests when checkstyle passes
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest  # Ascend container image with CANN, torch_npu, triton-ascend pre-installed
-      options: --privileged -v /dev/davinci_manager:/dev/davinci_manager -v /dev/devmm_svm:/dev/devmm_svm -v /dev/hisi_hdc:/dev/hisi_hdc --ipc=host
+      options: >-
+        --privileged
+        -v /dev/davinci_manager:/dev/davinci_manager
+        -v /dev/devmm_svm:/dev/devmm_svm
+        -v /dev/hisi_hdc:/dev/hisi_hdc
+        --ipc=host
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
@@ -87,6 +92,7 @@ jobs:
         pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==8.3.2 pytest-xdist==3.6.1 pyyaml
         pip install torch_npu==2.6.0
         pip install triton-ascend
+        python3 -c "import torch; import torch_npu; print(torch_npu.npu.is_available())"
         python -c "import torch_npu; print('torch_npu version:', torch_npu.__version__)"
         python -c "import triton; print('triton version:', triton.__version__)"
 
