@@ -58,11 +58,11 @@ jobs:
       run: make checkstyle
 
   tests:
-    runs-on: ${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}  # Requires Ascend self-hosted runner configuration
-    needs: [checkstyle]  # Wait for checkstyle job to complete
-    if: success()  # Only run tests when checkstyle passes
+    runs-on: ${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}
+    needs: [checkstyle]
+    if: success()
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest  # Ascend container image with CANN, torch_npu, triton-ascend pre-installed
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
       options: >-
         --privileged
         -v /dev/davinci_manager:/dev/davinci_manager
@@ -88,8 +88,7 @@ jobs:
     - name: Install torch_npu and triton-ascend
       shell: bash
       run: |
-        # torch_npu and triton-ascend are assumed to be pre-installed in the container image
-        pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==8.3.2 pytest-xdist==3.6.1 pyyaml
+        pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==8.3.2 pytest-xdist==3.6.1 pyyaml pybind11
         pip install torch_npu==2.6.0
         pip install triton-ascend
         python3 -c "import torch; import torch_npu; print(torch_npu.npu.is_available())"
@@ -102,7 +101,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -e .[dev]
-        # torch_npu and triton-ascend are pre-installed in the container image
 
     - name: List Python Environments
       shell: bash
