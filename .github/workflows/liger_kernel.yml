@@ -99,7 +99,13 @@ jobs:
         pip install triton-ascend
         python3 -c "import torch; import torch_npu; print(torch_npu.npu.is_available())"
         python -c "import torch_npu; print('torch_npu version:', torch_npu.__version__)"
-        python -c "import triton; print('triton version:', triton.__version__)"
+
+        python - <<'PY'
+        import triton
+        print("triton version:", triton.__version__)
+        print("has autotune:", hasattr(triton, "autotune"))
+        PY
+
 
     - name: Setup Dependencies
       working-directory: Liger-Kernel
