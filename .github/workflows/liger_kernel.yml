@@ -62,7 +62,7 @@ jobs:
     needs: [checkstyle]
     if: success()
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
       options: >-
         --privileged
         -v /dev/davinci_manager:/dev/davinci_manager
