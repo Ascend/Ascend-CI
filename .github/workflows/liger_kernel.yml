@@ -59,7 +59,7 @@ jobs:
 
   tests:
     name: Tests (${{ matrix.name }})
-    runs-on: ${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}
+    runs-on: ${{ github.event.inputs.runner || 'linux-arm64-npu-2' }}
     needs: [checkstyle]
     if: success()
     strategy:
