@@ -67,11 +67,12 @@ jobs:
       matrix:
         include:
           - name: transformers
-            command: python -m pytest --disable-warnings \
-                      --cov=src/liger_kernel \
-                      --cov-report=term-missing \
-                      --ignore=test/convergence \
-                      test/transformers
+            command: >-
+              python -m pytest test/transformers
+                --cov=src/liger_kernel
+                --cov-report=term-missing
+                --ignore=test/convergence
+                --disable-warnings
           - name: full
             command: make test
     container:
