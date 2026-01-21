@@ -108,7 +108,7 @@ jobs:
     - name: Install torch_npu and triton-ascend
       shell: bash
       run: |
-        pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==8.3.2 pytest-xdist==3.6.1 pyyaml pybind11
+        pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==9.0.2 pytest-xdist==3.6.1 pyyaml pybind11
         pip install torch_npu==2.6.0
         pip install triton-ascend
         python3 -c "import torch; import torch_npu; print(torch_npu.npu.is_available())"
