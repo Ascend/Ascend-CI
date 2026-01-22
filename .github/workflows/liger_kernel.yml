@@ -24,8 +24,8 @@ on:
           - linux-arm64-npu-4
         default: "linux-arm64-npu-1"
         description: "The runner selected to run on"
-schedule:
-  - cron: "0 12 * * 0"
+  schedule:
+    - cron: "0 12 * * 0"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -75,7 +75,6 @@ jobs:
                 --cov-report=term-missing
                 --ignore=test/convergence
                 --disable-warnings
-                2>&1
           - name: full
             command: make test
     container:
@@ -133,4 +132,4 @@ jobs:
       shell: bash
       run: |
         # Run tests only after checkstyle passes
-        ${{ matrix.command }}
+        ${{ matrix.command }} 2>&1
