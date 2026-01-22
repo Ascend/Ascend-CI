@@ -55,6 +55,7 @@ jobs:
     - name: Create venv
       run: |
         uv venv .venv
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       working-directory: Liger-Kernel
@@ -119,6 +120,7 @@ jobs:
     - name: Create venv
       run: |
         uv venv .venv
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
 
     - name: Install torch_npu and triton-ascend
       shell: bash
