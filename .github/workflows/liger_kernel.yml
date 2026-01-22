@@ -75,6 +75,7 @@ jobs:
                 --cov-report=term-missing
                 --ignore=test/convergence
                 --disable-warnings
+                2>&1
           - name: full
             command: make test
     container:
