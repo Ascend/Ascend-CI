@@ -53,7 +53,8 @@ jobs:
       working-directory: Liger-Kernel
       run: |
         python -m pip install --upgrade pip
-        pip install -r dev/fmt-requirements.txt
+        pip install uv
+        uv pip install -r dev/fmt-requirements.txt
 
     - name: Run checkstyle
       working-directory: Liger-Kernel
@@ -92,7 +93,7 @@ jobs:
     - name: Checkout Liger-Kernel
       uses: actions/checkout@v6
       with:
-          repository: linkedin/Liger-Kernel
+          repository: xuedinge233/Liger-Kernel
           path: Liger-Kernel
 
     - name: Set up Python
@@ -110,9 +111,12 @@ jobs:
     - name: Install torch_npu and triton-ascend
       shell: bash
       run: |
-        pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==9.0.2 pytest-xdist==3.6.1 pyyaml pybind11
-        pip install torch_npu==2.6.0
-        pip install triton-ascend
+        python -m pip install --upgrade pip
+        pip install uv
+
+        uv pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==9.0.2 pytest-xdist==3.6.1 pyyaml pybind11
+        uv pip install torch_npu==2.6.0
+        uv pip install triton-ascend
         python3 -c "import torch; import torch_npu; print(torch_npu.npu.is_available())"
         python -c "import torch_npu; print('torch_npu version:', torch_npu.__version__)"
 
@@ -120,8 +124,7 @@ jobs:
       working-directory: Liger-Kernel
       shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev]
+        uv pip install -e .[dev]
 
     - name: List Python Environments
       shell: bash
