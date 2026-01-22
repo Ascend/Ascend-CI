@@ -49,12 +49,19 @@ jobs:
           repository: linkedin/Liger-Kernel
           path: Liger-Kernel
 
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Create venv
+      run: |
+        uv venv .venv
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
     - name: Install dependencies
       working-directory: Liger-Kernel
       run: |
-        python -m pip install --upgrade pip
-        pip install uv
-        uv venv
         uv pip install -r dev/fmt-requirements.txt
 
     - name: Run checkstyle
@@ -109,13 +116,19 @@ jobs:
         npu-smi info
         echo "NPU devices available"
 
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Create venv
+      run: |
+        uv venv .venv
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
     - name: Install torch_npu and triton-ascend
       shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install uv
-        uv venv
-
         uv pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==9.0.2 pytest-xdist==3.6.1 pyyaml pybind11
         uv pip install torch_npu==2.6.0
         uv pip install triton-ascend
