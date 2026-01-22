@@ -49,15 +49,8 @@ jobs:
           repository: linkedin/Liger-Kernel
           path: Liger-Kernel
 
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-    - name: Create venv
-      run: |
-        uv venv .venv
-        echo "$PWD/.venv/bin" >> $GITHUB_PATH
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v7
 
     - name: Install dependencies
       working-directory: Liger-Kernel
@@ -110,16 +103,8 @@ jobs:
         # Python should be pre-installed in the container image
         python --version
 
-    - name: Verify NPU availability
-      shell: bash
-      run: |
-        npu-smi info
-        echo "NPU devices available"
-
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v7
 
     - name: Create venv
       run: |
