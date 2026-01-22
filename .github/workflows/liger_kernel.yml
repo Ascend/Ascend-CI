@@ -51,6 +51,10 @@ jobs:
 
     - name: Setup uv
       uses: astral-sh/setup-uv@v7
+    
+      - name: Create venv
+      run: |
+        uv venv .venv
 
     - name: Install dependencies
       working-directory: Liger-Kernel
@@ -111,6 +115,10 @@ jobs:
 
     - name: Setup uv
       uses: astral-sh/setup-uv@v7
+    
+    - name: Create venv
+      run: |
+        uv venv .venv
 
     - name: Install torch_npu and triton-ascend
       shell: bash
