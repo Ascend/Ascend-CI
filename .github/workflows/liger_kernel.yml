@@ -51,13 +51,17 @@ jobs:
 
     - name: Setup uv
       uses: astral-sh/setup-uv@v7
-      with:
-        enable-cache: true
+    
+    - name: Create venv
+      run: |
+        uv venv .venv
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       working-directory: Liger-Kernel
       run: |
         uv pip install -r dev/fmt-requirements.txt
+        uv pip list
 
     - name: Run checkstyle
       working-directory: Liger-Kernel
@@ -113,8 +117,11 @@ jobs:
 
     - name: Setup uv
       uses: astral-sh/setup-uv@v7
-      with:
-        enable-cache: true
+    
+    - name: Create venv
+      run: |
+        uv venv .venv
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
 
     - name: Install torch_npu and triton-ascend
       shell: bash
@@ -133,7 +140,7 @@ jobs:
 
     - name: List Python Environments
       shell: bash
-      run: python -m pip list
+      run: uv pip list
 
     - name: Run Unit Tests
       working-directory: Liger-Kernel
