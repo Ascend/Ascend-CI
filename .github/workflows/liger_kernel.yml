@@ -51,7 +51,12 @@ jobs:
 
     - name: Setup uv
       uses: astral-sh/setup-uv@v7
-    
+
+    - name: Create venv
+      run: |
+        uv venv .venv
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
     - name: Create venv
       run: |
         uv venv .venv
@@ -117,7 +122,12 @@ jobs:
 
     - name: Setup uv
       uses: astral-sh/setup-uv@v7
-    
+
+    - name: Create venv
+      run: |
+        uv venv .venv
+        echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
     - name: Create venv
       run: |
         uv venv .venv
