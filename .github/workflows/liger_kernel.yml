@@ -111,6 +111,7 @@ jobs:
       run: |
         npu-smi info
         echo "NPU devices available"
+        cat $ASCEND_TOOLKIT_HOME/toolkit/version.info
 
     - name: Setup uv
       uses: astral-sh/setup-uv@v7
