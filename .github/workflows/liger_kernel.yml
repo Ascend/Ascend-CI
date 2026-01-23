@@ -119,6 +119,12 @@ jobs:
       with:
         activate-environment: true
 
+    - name: Setup Dependencies
+      working-directory: Liger-Kernel
+      shell: bash
+      run: |
+        uv pip install -e .[dev]
+
     - name: Install torch_npu and triton-ascend
       shell: bash
       run: |
@@ -128,13 +134,6 @@ jobs:
         uv pip install triton-ascend==3.2.0rc4
         python3 -c "import torch; import torch_npu; print(torch_npu.npu.is_available())"
         python -c "import torch_npu; print('torch_npu version:', torch_npu.__version__)"
-
-    - name: Setup Dependencies
-      working-directory: Liger-Kernel
-      shell: bash
-      run: |
-        echo "torch_npu==2.6.0" >> constraints.txt
-        uv pip install -e .[dev] -c constraints.txt
 
     - name: List Python Environments
       shell: bash
