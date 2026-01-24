@@ -78,9 +78,8 @@ jobs:
               python -m pytest test/transformers
                 --cov=src/liger_kernel
                 --cov-report=term-missing
-                --ignore=test/convergence
                 --disable-warnings
-                --ignore-glob='*test_fused_neighborhood_attention.py'
+                --ignore=test/transformers/test_fused_neighborhood_attention.py
           - name: full
             command: make test
     container:
