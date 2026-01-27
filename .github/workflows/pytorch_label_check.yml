@@ -16,10 +16,15 @@ on:
         required: true
         type: choice
         options:
-          - "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.2.rc1-910b-ubuntu22.04-py3.11"
+          - "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11"
           - "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest"
         default: "swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest"
         description: "The container image to use"
+      max_parallel:
+        required: true
+        type: number
+        default: 2
+        description: "Max parallel PR jobs"
 
   pull_request:
     branches:
@@ -43,6 +48,7 @@ jobs:
     outputs:
       runner: ${{ steps.set.outputs.runner }}
       images: ${{ steps.set.outputs.images }}
+      max_parallel: ${{ steps.set.outputs.max_parallel }}
       pr_numbers: ${{ steps.set_matrix.outputs.pr_numbers }}
     steps:
       - name: Set outputs
@@ -50,8 +56,10 @@ jobs:
         run: |
           runner=${{ inputs.runner  || 'linux-arm64-npu-1' }}
           image=${{ inputs.image || 'swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest' }}
+          max_parallel=${{ inputs.max_parallel || 2 }}
           echo "runner=${runner}" >> $GITHUB_OUTPUT
-          echo "images=${image}" >> $GITHUB_OUTPUT
+          echo "images="${image}" >> $GITHUB_OUTPUT
+          echo "max_parallel=${max_parallel}" >> $GITHUB_OUTPUT
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,13 +67,23 @@ jobs:
       - name: Get open PRs from repo
         id: get_prs
         run: |
-            url="https://api.github.com/search/issues?q=is:pr+is:open+repo:pytorch/pytorch+label:%22module:%20PrivateUse1%22"
-            prs=$(curl -s -H "Authorization: token ${{ secrets.COSDT_BOT_TOKEN }}" $url)
-            echo "$prs" > matched.json
-            cat matched.json
+          url="https://api.github.com/search/issues?q=is:pr+is:open+repo:pytorch/pytorch+label:\"module:%20PrivateUse1\""
+          prs=$(curl -s -H "Authorization: token ${{ secrets.COSDT_BOT_TOKEN }}" "$url")
+          echo "$prs" > search.json
 
-            count=$(jq '.items | length' matched.json)
-            echo "found=$count" >> $GITHUB_OUTPUT
+          count=$(jq '.items | length' search.json)
+          echo "found=$count" >> $GITHUB_OUTPUT
+
+          echo "[]" > matched.json
+          jq -r '.items[].pull_request.url' search.json | while read -r pr_url; do
+            pr=$(curl -s -H "Authorization: token ${{ secrets.COSDT_BOT_TOKEN }}" "$pr_url")
+            number=$(jq -r '.number' <<< "$pr")
+            head_repo=$(jq -r '.head.repo.full_name' <<< "$pr")
+            head_ref=$(jq -r '.head.ref' <<< "$pr")
+            jq --argjson number "$number" --arg head_repo "$head_repo" --arg head_ref "$head_ref" \
+              '. + [{"number": $number, "head_repo": $head_repo, "head_ref": $head_ref}]' \
+              matched.json > matched.tmp && mv matched.tmp matched.json
+          done
 
       - name: Show matched PRs
         if: steps.get_prs.outputs.found != '0'
@@ -74,7 +92,7 @@ jobs:
       - name: Set matrix for parallel PR checkout
         id: set_matrix
         run: |
-            matrix_prs=$(jq -r '.items[].number' matched.json | jq -s -c '.')
+            matrix_prs=$(jq -r '.[].number' matched.json | jq -s -c '.')
             echo "matrix_prs=$matrix_prs" >> $GITHUB_ENV
             echo "pr_numbers=$matrix_prs" >> $GITHUB_OUTPUT
 
@@ -93,6 +111,7 @@ jobs:
     container:
       image: ${{ needs.prepare.outputs.images }}
     strategy:
+      max-parallel: ${{ needs.prepare.outputs.max_parallel }}
       matrix:
         pr_number: ${{ fromJson(needs.prepare.outputs.pr_numbers) }}
     steps:
@@ -105,21 +124,17 @@ jobs:
           name: matched
 
       - name: Checkout PR branch
-        id: pr_checkout
         run: |
             # Get the PR details
             pr_number=${{ matrix.pr_number }}
-            head_repo=$(jq -r ".items[] | select(.number==$pr_number) | .head.repo.full_name" matched.json)
-            head_ref=$(jq -r ".items[] | select(.number==$pr_number) | .head.ref" matched.json)
+            head_repo=$(jq -r ".[] | select(.number==$pr_number) | .head_repo" matched.json)
+            head_ref=$(jq -r ".[] | select(.number==$pr_number) | .head_ref" matched.json)
 
             echo "Checking out PR #$pr_number from $head_repo ($head_ref)"
 
             git clone --depth=1 --branch "$head_ref" \
             "https://github.com/$head_repo.git" pr-code-$pr_number
             ls -al pr-code-$pr_number
-
-            echo "head_repo=$head_repo" >> "$GITHUB_OUTPUT"
-            echo "head_ref=$head_ref" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         working-directory: pr-code-${{ matrix.pr_number }}
@@ -133,108 +148,27 @@ jobs:
         id: test
         working-directory: pr-code-${{ matrix.pr_number }}
         run: |
-            set -o pipefail
-            log_file=$(realpath ../test-output-${{ matrix.pr_number }}.log)
-            summary_file=$(realpath ../test-summary-${{ matrix.pr_number }}.log)
-
-            python test/run_test.py --verbose --exclude-jit-executor 2>&1 | tee "$log_file"
-            status=$?
-
-            tail -n 200 "$log_file" > "$summary_file" || true
-
-            echo "status=$status" >> "$GITHUB_OUTPUT"
-            echo "log=$log_file" >> "$GITHUB_OUTPUT"
-            echo "summary=$summary_file" >> "$GITHUB_OUTPUT"
-
-            exit $status
+            python test/run_test.py --verbose --exclude-jit-executor
         continue-on-error: true
 
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytorch-pr-${{ matrix.pr_number }}-logs
-          path: |
-            ${{ steps.test.outputs.log }}
-            ${{ steps.test.outputs.summary }}
-
       - name: Create GitHub Issue on Failure
-        if: steps.test.outcome == 'failure'
+        # if: steps.test.outcome == 'failure'
         uses: actions/github-script@v7
-        env:
-          SUMMARY_FILE: ${{ steps.test.outputs.summary }}
-          LOG_FILE: ${{ steps.test.outputs.log }}
-          PR_NUMBER: ${{ matrix.pr_number }}
-          HEAD_REPO: ${{ steps.pr_checkout.outputs.head_repo }}
-          HEAD_REF: ${{ steps.pr_checkout.outputs.head_ref }}
         with:
           github-token: ${{ secrets.COSDT_BOT_TOKEN }}
           script: |
-            const fs = require('fs');
-
-            const prNumber = process.env.PR_NUMBER;
-            const summaryFile = process.env.SUMMARY_FILE;
-            const summary = fs.existsSync(summaryFile) ? fs.readFileSync(summaryFile, 'utf8') : 'No summary available.';
-
-            const title = `[PyTorch CI] PR #${prNumber} test failure`;
-            const body = [
-              `PyTorch upstream PR pytorch/pytorch#${prNumber} failed in this workflow.`,
-              '',
-              `- Workflow: ${process.env.GITHUB_WORKFLOW}`,
-              `- Job: ${process.env.GITHUB_JOB}`,
-              `- Run: https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
-              `- Head: ${process.env.HEAD_REPO}@${process.env.HEAD_REF}`,
-              '',
-              'Test log tail (last 200 lines):',
-              '```',
-              summary,
-              '```',
-              '',
-              `Related PR: pytorch/pytorch#${prNumber}`
-            ].join('\n');
-
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              state: 'open',
-              per_page: 100,
-            });
-
-            let trackingIssue = issues.find(i => i.title === title);
-
-            if (!trackingIssue) {
-              // 2. 没有的话创建一个新的 issue
-              const created = await github.rest.issues.create({
-                owner,
-                repo,
-                title,
-                body,
-              });
-              trackingIssue = created.data;
-            } else {
-              // 3. 已经有 issue，就在现有 issue 下面追加一条 comment 记录新的失败
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: trackingIssue.number,
-                body: [
-                  `Detected another failure for pytorch/pytorch#${prNumber} in this workflow.`,
-                  '',
-                  `- Workflow: ${process.env.GITHUB_WORKFLOW}`,
-                  `- Job: ${process.env.GITHUB_JOB}`,
-                  `- Run: https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
-                  '',
-                  'Test log tail (last 200 lines):',
-                  '```',
-                  summary,
-                  '```',
-                ].join('\n'),
-              });
-            }
-
-            # await github.rest.issues.createComment({
-            #   owner: 'pytorch',
-            #   repo: 'pytorch',
-            #   issue_number: Number(prNumber),
-            #   body: `Detected failure in external CI. Tracking issue: ${issue.data.html_url}`,
-            # });
+            await github.rest.issues.create({
+              owner: 'xuedinge233',
+              repo: 'pytorch',
+              title: `Build Failed in Workflow ${context.workflow}`,
+              body: [
+                'The build failed. Please investigate.',
+                '',
+                '- Related test PR: https://github.com/Ascend/Ascend-CI/pull/49',
+                `- **Workflow**: \`${context.workflow}\``,
+                `- **Job**: \`${context.job}\``,
+                `- **Commit**: \`${context.sha}\``,
+                `- **Triggered by**: \`${context.actor}\``,
+                `- **Logs**: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              ].join('\n')
+            })
