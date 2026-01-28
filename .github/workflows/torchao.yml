@@ -69,7 +69,7 @@ jobs:
     name: Run unit tests with TorchAO
     runs-on: ${{ needs.prepare.outputs.runner }}
     container:
-      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:8.3.rc1-910b-ubuntu22.04-py3.11
       options: >-
         --network host
         --device ${{ needs.prepare.outputs.device }}
