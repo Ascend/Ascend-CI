@@ -1,4 +1,4 @@
-name: Ascend NPU
+name: liger_kernel test
 
 on:
   push:
