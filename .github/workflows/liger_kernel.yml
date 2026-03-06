@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - liger_kernel
+      - liger-kernel
   pull_request:
     branches:
       - main
