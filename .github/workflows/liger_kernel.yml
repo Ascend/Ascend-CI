@@ -116,7 +116,8 @@ jobs:
         python -c "import torch_npu; print('torch_npu version:', torch_npu.__version__)"
 
     - name: List Python Environments
-      run: "${UV_BIN:-uv}" pip list
+      run: |
+        "${UV_BIN:-uv}" pip list
 
     - name: Run Unit Tests
       run: |
