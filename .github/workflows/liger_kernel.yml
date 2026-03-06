@@ -22,7 +22,7 @@ on:
         default: "linux-arm64-npu-1"
         description: "The runner selected to run on"
   schedule:
-    - cron: "0 12 * * *"
+    - cron: '0 12 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
