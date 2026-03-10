@@ -8,10 +8,11 @@ on:
         type: choice
         options:
           - self-hosted
-          - linux-arm64-npu-1
-          - linux-arm64-npu-2
-          - linux-arm64-npu-4
-        default: 'linux-arm64-npu-1'
+          - linux-aarch64-a2-1
+          - linux-aarch64-a2-2
+          - linux-aarch64-a2-4
+          - linux-aarch64-a2-8
+        default: 'linux-aarch64-a2-1'
         description: 'Runner to run on'
   push:
     branches:
@@ -37,7 +38,7 @@ jobs:
       - name: Set runner
         id: set
         run: |
-          echo "runner=${{ github.event.inputs.runner || 'linux-arm64-npu-1' }}" >> $GITHUB_OUTPUT
+          echo "runner=${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}" >> $GITHUB_OUTPUT
 
   build-and-test:
     name: Build and test onnx runtime from source
