@@ -41,9 +41,9 @@ jobs:
           echo "runner=${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}" >> $GITHUB_OUTPUT
 
   build-and-test:
-    name: Build and test onnx runtime from source
+    name: Build and test onnx runtime from source 
     needs: prepare
-    if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' || github.event_name == 'push') }}
+    if: ${{ github.repository_owner == 'Ascend' && (contains(github.event.comment.body, 'recheck') || github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
     runs-on: ${{ needs.prepare.outputs.runner }}
     strategy:
       matrix:
