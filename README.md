@@ -16,7 +16,7 @@ The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and
 | OS | openEuler |
 | Period | UTC 1200 daily |
 | Branch  | main |
-| Status  | ![Linux Ascend](https://github.com/Ascend/onnxruntime/actions/workflows/build-and-test.yaml/badge.svg) |
+| Status  | ![Linux Ascend](https://github.com/Ascend/onnxruntime/actions/workflows/onnxruntime.yml/badge.svg) |
 | Recheck By Hand | comment 'recheck' in any issue |
 
 ### Known Issue

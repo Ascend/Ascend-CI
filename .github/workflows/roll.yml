@@ -7,10 +7,11 @@ on:
         required: true
         type: choice
         options:
-          - linux-arm64-npu-1
-          - linux-arm64-npu-2
-          - linux-arm64-npu-4
-        default: linux-arm64-npu-1
+          - linux-aarch64-a2-1
+          - linux-aarch64-a2-2
+          - linux-aarch64-a2-4
+          - linux-aarch64-a2-8
+        default: linux-aarch64-a2-1
         description: "The runner selected to run on"
   push:
     branches:
@@ -34,7 +35,7 @@ defaults:
 jobs:
   roll:
     name: Run ROLL with CANN container
-    runs-on: ${{ inputs.runner || 'linux-arm64-npu-1' }}
+    runs-on: ${{ inputs.runner || 'linux-aarch64-a2-1' }}
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
       env:
