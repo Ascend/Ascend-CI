@@ -99,8 +99,8 @@ jobs:
       - name: Build and test onnx runtime
         working-directory: onnxruntime
         run: |
-          # 获取并检出上游 PR 25627 到本地分支 pr-123
-          git fetch origin pull/25627/head:pr-123
+          # 获取并检出上游 PR 27091 到本地分支 pr-123
+          git fetch origin pull/27091/head:pr-123
           git checkout pr-123
           ./build.sh --allow_running_as_root \
             --config RelWithDebInfo \
