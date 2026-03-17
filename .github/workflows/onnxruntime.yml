@@ -88,6 +88,10 @@ jobs:
             attrs \
             flatbuffers \
             protobuf==3.20.3
+        
+      - name: List python packages
+        run: |
+          pip list
 
       - name: Checkout onnx
         uses: actions/checkout@v4
