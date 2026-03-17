@@ -54,6 +54,9 @@ jobs:
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:${{ matrix.image }}
       options: --entrypoint /bin/sh
+      env:
+        LANG: en_US.UTF-8
+        LC_ALL: en_US.UTF-8
 
     steps:
       - name: Show NPU info
@@ -62,6 +65,7 @@ jobs:
           echo "ASCEND_TOOLKIT_HOME: $ASCEND_TOOLKIT_HOME"
           cat $ASCEND_TOOLKIT_HOME/set_env.sh || true
           cat $ASCEND_TOOLKIT_HOME/cann/version.info || cat $ASCEND_TOOLKIT_HOME/ascend-toolkit/version.info || true
+
       - name: Config mirrors
         run: |
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
@@ -79,7 +83,12 @@ jobs:
               libreadline-dev \
               libsqlite3-dev \
               libeigen3-dev \
-              libre2-dev
+              libre2-dev \
+              locales
+
+          # 修复 StringNormalizer 测试：安装并配置 en_US.UTF-8 locale
+          locale-gen en_US.UTF-8
+          update-locale LANG=en_US.UTF-8
 
           pip install --upgrade pip
           pip install make cmake twine \
@@ -120,8 +129,8 @@ jobs:
         working-directory: onnxruntime/build/Linux/RelWithDebInfo
         if: failure()
         run: |
-          ctest --rerun-failed --output-on-failure 2>&1 | tee failed_test_output.log
-          cat Testing/Temporary/LastTest.log
+          ctest --rerun-failed --output-on-failure 2>&1 | tee failed_test_output-${{ matrix.image }}.log
+          cat Testing/Temporary/LastTest-${{ matrix.image }}.log
 
       - name: Upload test logs
         if: failure()
@@ -129,5 +138,5 @@ jobs:
         with:
           name: test-logs
           path: |
-            onnxruntime/build/Linux/RelWithDebInfo/Testing/Temporary/LastTest.log
-            onnxruntime/build/Linux/RelWithDebInfo/failed_test_output.log
+            onnxruntime/build/Linux/RelWithDebInfo/Testing/Temporary/LastTest-${{ matrix.image }}.log
+            onnxruntime/build/Linux/RelWithDebInfo/failed_test_output-${{ matrix.image }}.log
