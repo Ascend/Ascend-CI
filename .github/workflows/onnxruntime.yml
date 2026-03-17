@@ -115,3 +115,19 @@ jobs:
             --use_cann \
             --build_wheel \
             --cmake_extra_defines "CMAKE_CXX_FLAGS=-fno-var-tracking-assignments -O2"
+      
+      - name: Rerun failed tests with verbose output
+        working-directory: onnxruntime/build/Linux/RelWithDebInfo
+        if: failure()
+        run: |
+          ctest --rerun-failed --output-on-failure 2>&1 | tee failed_test_output.log
+          cat Testing/Temporary/LastTest.log
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: |
+            onnxruntime/build/Linux/RelWithDebInfo/Testing/Temporary/LastTest.log
+            onnxruntime/build/Linux/RelWithDebInfo/failed_test_output.log
