@@ -1,4 +1,5 @@
 ARG ARCH="aarch64"
+ARG PYTHON_VERSION="311"
 FROM quay.io/pypa/manylinux_2_28_${ARCH}:latest
 
 # ARG Definition
@@ -30,9 +31,9 @@ ENV PATH="/opt/cmake/bin:${PATH}"
 
 WORKDIR /root
 
-RUN wget https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.1.RC1/Ascend-cann-toolkit_8.1.RC1_linux-${ARCH}.run && \
-    chmod +x ./Ascend-cann-toolkit_8.1.RC1_linux-${ARCH}.run && \
-    ./Ascend-cann-toolkit_8.1.RC1_linux-${ARCH}.run --full -q
+RUN wget https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.3.RC1/Ascend-cann-toolkit_8.3.RC1_linux-${ARCH}.run && \
+    chmod +x ./Ascend-cann-toolkit_8.3.RC1_linux-${ARCH}.run && \
+    ./Ascend-cann-toolkit_8.3.RC1_linux-${ARCH}.run --full -q
 
 RUN echo 'source /usr/local/Ascend/ascend-toolkit/set_env.sh' >> /root/.bashrc && \
     echo "alias ll='ls -l --color=auto'" >> ~/.bashrc

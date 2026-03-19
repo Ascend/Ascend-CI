@@ -12,6 +12,7 @@ EOF
 
 LATEST_TAG=$1
 echo "New tag (from github): $LATEST_TAG"
+LASEST_TAG=1.24.1
 
 REPO="microsoft/onnxruntime"
 REPO_URL="https://github.com/$REPO.git"
@@ -41,8 +42,8 @@ build_and_upload() {
   cd onnxruntime
   git config --global user.name "dou"
   git config --global user.email "15529241576@163.com"
-  git fetch "$REPO_URL" pull/25627/head:pr-123
-  git cherry-pick pr-123
+  # git fetch "$REPO_URL" pull/25627/head:pr-123
+  # git cherry-pick pr-123
   
   ./build.sh --allow_running_as_root \
              --config Release \
