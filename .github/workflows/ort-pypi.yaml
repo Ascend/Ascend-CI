@@ -64,7 +64,7 @@ jobs:
     needs: check
     if: needs.check.outputs.skip_build == 'false'
     name: Build for ${{ matrix.build_name }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     container:
       image: ${{ matrix.image }}
       credentials:
