@@ -97,8 +97,9 @@ jobs:
 
           - arch: aarch
             runner: linux-aarch64-a2-1
-            image: xuedinge233/demo-app:manylinux_2_28_aarch64_1
+            image: quay.io/damow890/manylinux_2_28_aarch64:latest
             build_name: aarch64-py311-cann8.3rc1
+  
     steps:
       - name: Clone ASCEND-CI project
         uses: actions/checkout@v4
