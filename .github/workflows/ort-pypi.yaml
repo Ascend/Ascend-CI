@@ -13,7 +13,7 @@ on:
 
 jobs:
   check:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       last_tag: ${{ steps.get_tag.outputs.last_tag }}
       latest_tag: ${{ steps.get_latest_tag.outputs.latest_tag }}
@@ -33,7 +33,6 @@ jobs:
 
           echo "last_tag=$pypi_tag" >> $GITHUB_OUTPUT
 
-
       - id: get_latest_tag
         run: |
           REPO="microsoft/onnxruntime"
@@ -42,7 +41,6 @@ jobs:
           LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | \
                       grep '"name":' | head -n 1 | cut -d '"' -f 4)
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-
 
       - id: compare_tags
         run: |
@@ -64,13 +62,12 @@ jobs:
     needs: check
     if: needs.check.outputs.skip_build == 'false'
     name: Build for ${{ matrix.build_name }}
-    runs-on: ubuntu-latest
+    runs-on: linux-aarch64-a2-1
     container:
       image: ${{ matrix.image }}
       env:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-      volumes:
-        - ${{ github.workspace }}/Ascend-CI:/root/Ascend-CI
+      options: --entrypoint ""
 
     strategy:
       matrix:
@@ -102,7 +99,7 @@ jobs:
   
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure PyPI credentials
         run: |
@@ -116,7 +113,7 @@ jobs:
           EOF
 
       - name: Checkout ONNX Runtime
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: microsoft/onnxruntime
           path: onnxruntime
@@ -125,7 +122,7 @@ jobs:
       - name: Build ONNX Runtime wheel
         working-directory: onnxruntime
         run: |
-          source /usr/local/Ascend/ascend-toolkit/set_env.sh 2>/dev/null || true
+          git checkout ${{ needs.check.outputs.latest_tag }}
           ./build.sh --allow_running_as_root \
             --config Release \
             --build_shared_lib \

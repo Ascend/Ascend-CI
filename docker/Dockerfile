@@ -37,3 +37,6 @@ RUN wget https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.3.RC1
 
 RUN echo 'source /usr/local/Ascend/ascend-toolkit/set_env.sh' >> /root/.bashrc && \
     echo "alias ll='ls -l --color=auto'" >> ~/.bashrc
+
+# 保持容器运行，供 GitHub Actions 等 CI 使用（否则容器会立即退出）
+CMD ["sleep", "infinity"]
