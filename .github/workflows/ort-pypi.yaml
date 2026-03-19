@@ -63,7 +63,7 @@ jobs:
     needs: check
     if: needs.check.outputs.skip_build == 'false'
     name: Build for ${{ matrix.build_name }}
-    runs-on: linux-aarch64-a2-1
+    runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.image }}
       env:
