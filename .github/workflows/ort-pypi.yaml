@@ -67,6 +67,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.image }}
+      credentials:
+        username: ${{ secrets.SWR_USERNAME }}
+        password: ${{ secrets.SWR_PASSWD }}
       env:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       volumes:
