@@ -67,9 +67,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.image }}
-      credentials:
-        username: ${{ secrets.SWR_USERNAME }}
-        password: ${{ secrets.SWR_PASSWD }}
       env:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
       volumes:
@@ -104,15 +101,41 @@ jobs:
             build_name: aarch64-py311-cann8.3rc1
   
     steps:
-      - name: Clone ASCEND-CI project
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure PyPI credentials
+        run: |
+          cat > ~/.pypirc <<EOF
+            [distutils]
+            index-servers = onnxruntime-cann
+            [onnxruntime-cann]
+            repository = https://upload.pypi.org/legacy/
+            username = __token__
+            password = $PYPI_TOKEN
+          EOF
+
+      - name: Checkout ONNX Runtime
         uses: actions/checkout@v4
         with:
-          repository: Ascend/Ascend-CI
-          path: Ascend-CI
+          repository: microsoft/onnxruntime
+          path: onnxruntime
+          fetch-depth: 1
 
-      - name: Build and upload pypi
-        working-directory: /root/Ascend-CI
+      - name: Build ONNX Runtime wheel
+        working-directory: onnxruntime
         run: |
-          chmod +x ./script/pypiPkg.sh
-          ./script/pypiPkg.sh \
-            ${{ needs.check.outputs.latest_tag }}
+          source /usr/local/Ascend/ascend-toolkit/set_env.sh 2>/dev/null || true
+          ./build.sh --allow_running_as_root \
+            --config Release \
+            --build_shared_lib \
+            --parallel \
+            --use_cann \
+            --build_wheel \
+            --skip_tests
+
+      - name: Upload to PyPI
+        working-directory: onnxruntime
+        run: |
+          echo "开始上传到 PyPI (onnxruntime-cann)..."
+          python3 -m twine upload --non-interactive --skip-existing --repository onnxruntime-cann build/Linux/Release/dist/*.whl
