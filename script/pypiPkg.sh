@@ -42,6 +42,7 @@ build_and_upload() {
   git config --global user.name "dou"
   git config --global user.email "15529241576@163.com"
   
+  pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple setuptools
   ./build.sh --allow_running_as_root \
              --config Release \
              --build_shared_lib \

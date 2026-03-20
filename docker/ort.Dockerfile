@@ -25,6 +25,7 @@ RUN set -eux; \
     ln -sf /opt/python${PYTHON_VERSION}/bin/pip${PY_MM} /usr/local/bin/pip3 && \
     ln -sf /opt/python${PYTHON_VERSION}/bin/pip${PY_MM} /usr/local/bin/pip && \
     pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    setuptools \
     twine \
     packaging \
     wheel \
