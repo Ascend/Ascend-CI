@@ -105,5 +105,4 @@ jobs:
             --parallel $(nproc) \
             --use_cann \
             --build_wheel \
-            --skip_tests \
             --cmake_extra_defines "CMAKE_CXX_FLAGS=-fno-var-tracking-assignments -O2"
