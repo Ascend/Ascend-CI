@@ -79,11 +79,26 @@ jobs:
             runner: ONNXRuntime
             image: bachelor233/manylinux2_28-py311-cann8.2.rc1-x86_64
             build_name: x86_64-py311-cann8.2rc1
-
+          - arch: x86_64
+            runner: ONNXRuntime
+            image: manylinux2_28-py312-cann8.5-x86_64:latest
+            build_name: x86_64-py312-cann8.5
+          - arch: x86_64
+            runner: ONNXRuntime
+            image: manylinux2_28-py313-cann8.5-x86_64:latest
+            build_name: x86_64-py313-cann8.5
           - arch: aarch
             runner: pypi-aarch
             image: bachelor233/manylinux2_28-py311-cann8.2.rc1-aarch64
             build_name: aarch64-py311-cann8.2rc1
+          - arch: aarch
+            runner: pypi-aarch
+            image: manylinux2_28-py312-cann8.5-aarch64:latest
+            build_name: aarch64-py312-cann8.5
+          - arch: aarch
+            runner: pypi-aarch
+            image: manylinux2_28-py313-cann8.5-aarch64:latest
+            build_name: aarch64-py313-cann8.5
 
     steps:
       - name: Clone ASCEND-CI project
