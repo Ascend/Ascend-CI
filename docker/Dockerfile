@@ -8,14 +8,15 @@ ARG PYTHON_VERSION
 ENV PYTHON_PATH=/opt/python/cp${PYTHON_VERSION}-cp${PYTHON_VERSION}
 
 #
-RUN dnf install -y vim wget openssl-devel
+RUN dnf install -y vim wget openssl-devel && \
+    dnf clean all && rm -rf /var/cache/dnf
 
 # Python
 RUN ln -s ${PYTHON_PATH}/bin/python3 /usr/local/bin/python3 && \
     ln -s ${PYTHON_PATH}/bin/python3 /usr/local/bin/python && \
     ln -s ${PYTHON_PATH}/bin/pip3 /usr/local/bin/pip3 && \
     ln -s ${PYTHON_PATH}/bin/pip /usr/local/bin/pip && \
-    pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple twine numpy==1.24.0 decorator attrs
+    pip3 install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple twine numpy==1.24.0 decorator attrs
 
 
 RUN cd /opt && \
@@ -25,18 +26,21 @@ RUN cd /opt && \
     cd cmake && \
     ./bootstrap && \
     make -j$(nproc) && \
-    make install
+    make install && \
+    cd /opt && rm -rf cmake cmake-3.29.7.tar.gz
 
 ENV PATH="/opt/cmake/bin:${PATH}"
 
+# COPY Ascend-cann-toolkit_8.5.0_linux-${ARCH}.run /root/Ascend-cann-toolkit_8.5.0_linux-${ARCH}.run
+
 WORKDIR /root
 
-RUN wget https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.3.RC1/Ascend-cann-toolkit_8.3.RC1_linux-${ARCH}.run && \
-    chmod +x ./Ascend-cann-toolkit_8.3.RC1_linux-${ARCH}.run && \
-    ./Ascend-cann-toolkit_8.3.RC1_linux-${ARCH}.run --full -q
+RUN wget https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.5.0/Ascend-cann-toolkit_8.5.0_linux-${ARCH}.run && \
+    chmod +x ./Ascend-cann-toolkit_8.5.0_linux-${ARCH}.run && \
+    ./Ascend-cann-toolkit_8.5.0_linux-${ARCH}.run --full -q && \
+    rm -f ./Ascend-cann-toolkit_8.5.0_linux-${ARCH}.run
 
 RUN echo 'source /usr/local/Ascend/ascend-toolkit/set_env.sh' >> /root/.bashrc && \
     echo "alias ll='ls -l --color=auto'" >> ~/.bashrc
 
-# 保持容器运行，供 GitHub Actions 等 CI 使用（否则容器会立即退出）
 CMD ["sleep", "infinity"]
