@@ -61,7 +61,7 @@ jobs:
 
   build:
     needs: check
-    if: needs.check.outputs.skip_build == 'false'
+    # if: needs.check.outputs.skip_build == 'false'
     name: Build for ${{ matrix.build_name }}
     runs-on: ${{ matrix.runner }}
     container:
@@ -139,6 +139,7 @@ jobs:
             --skip_tests
 
       - name: Upload to PyPI
+        if: needs.check.outputs.skip_build == 'false'
         working-directory: onnxruntime
         run: |
           echo "开始上传到 PyPI (onnxruntime-cann)..."
