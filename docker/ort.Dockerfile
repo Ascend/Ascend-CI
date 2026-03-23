@@ -1,3 +1,9 @@
+# docker build -f XXX/ort.Dockerfile \
+#   --build-arg ARCH=x86_64 \
+#   --build-arg PYTHON_VERSION=3.13.0
+#   -t ort:py313 . -t 指定镜像名:标签
+# ARCH 可选，默认aarch64，也可指定x86_64
+# PYTHON_VERSION 可选，默认3.12.3
 ARG ARCH="aarch64"
 ARG PYTHON_VERSION="3.12.3"
 FROM quay.io/pypa/manylinux_2_28_${ARCH}:latest
@@ -33,8 +39,9 @@ RUN set -eux; \
     decorator \
     attrs \
     flatbuffers \
-    protobuf==4.25.3
+    protobuf==4.25.8
 
+# Cmake
 RUN cd /opt && \
     wget https://cmake.org/files/v3.29/cmake-3.29.7.tar.gz && \
     mkdir cmake && \
