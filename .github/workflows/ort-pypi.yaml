@@ -31,8 +31,8 @@ jobs:
           EOF
           )
 
-          # echo "last_tag=$pypi_tag" >> $GITHUB_OUTPUT
-          echo "last_tag=v1.23.2" >> $GITHUB_OUTPUT
+          echo "last_tag=$pypi_tag" >> $GITHUB_OUTPUT
+          # echo "last_tag=v1.23.2" >> $GITHUB_OUTPUT
 
       - id: get_latest_tag
         run: |
@@ -42,7 +42,7 @@ jobs:
           LATEST_TAG=$(curl -s --connect-timeout 15 --max-time 30 "$API" | \
                       grep '"name":' | head -n 1 | cut -d '"' -f 4)
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-
+          # echo "latest_tag=v1.24.1" >> $GITHUB_OUTPUT
 
       - id: compare_tags
         run: |
@@ -75,10 +75,10 @@ jobs:
     strategy:
       matrix:
         include:
-          # - arch: x86_64
-          #   runner: ONNXRuntime
-          #   image: bachelor233/manylinux2_28-py311-cann8.2.rc1-x86_64
-          #   build_name: x86_64-py311-cann8.2rc1
+          - arch: x86_64
+            runner: ONNXRuntime
+            image: bachelor233/manylinux2_28-py311-cann8.2.rc1-x86_64
+            build_name: x86_64-py311-cann8.2rc1
           - arch: x86_64
             runner: ONNXRuntime
             image: bachelor233/manylinux2_28-py312-cann8.5-x86_64
@@ -87,10 +87,10 @@ jobs:
             runner: ONNXRuntime
             image: bachelor233/manylinux2_28-py313-cann8.5-x86_64
             build_name: x86_64-py313-cann8.5
-          # - arch: aarch
-          #   runner: pypi-aarch
-          #   image: bachelor233/manylinux2_28-py311-cann8.2.rc1-aarch64
-          #   build_name: aarch64-py311-cann8.2rc1
+          - arch: aarch
+            runner: pypi-aarch
+            image: bachelor233/manylinux2_28-py311-cann8.2.rc1-aarch64
+            build_name: aarch64-py311-cann8.2rc1
           - arch: aarch
             runner: pypi-aarch
             image: bachelor233/manylinux2_28-py312-cann8.5-aarch64
