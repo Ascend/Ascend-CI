@@ -62,13 +62,12 @@ jobs:
   build:
     needs: check
     # if: needs.check.outputs.skip_build == 'false'
-    name: Build for ${{ matrix.build_name }}
+    name: Build for ${{ matrix.build_name }}(${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.image }}
       env:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-      options: --entrypoint ""
 
     strategy:
       matrix:
