@@ -1,7 +1,7 @@
 # docker build -f XXX/ort.Dockerfile \
 #   --build-arg ARCH=x86_64 \
 #   --build-arg PYTHON_VERSION=3.13.0
-#   -t ort:py313 . -t 指定镜像名:标签
+#   -t ort:py313 .
 # ARCH 可选，默认aarch64，也可指定x86_64
 # PYTHON_VERSION 可选，默认3.12.3
 ARG ARCH="aarch64"
