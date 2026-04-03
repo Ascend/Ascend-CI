@@ -17,11 +17,13 @@ on:
   push:
     branches:
       - main
+      - onnx
     paths:
       - '.github/workflows/onnxruntime.yml'
   pull_request:
     branches:
       - main
+      - onnx
     paths:
       - '.github/workflows/onnxruntime.yml'
   schedule:
@@ -62,11 +64,16 @@ jobs:
 
     steps:
       - name: Show NPU info
+        shell: bash
         run: |
           npu-smi info
-          echo "ASCEND_TOOLKIT_HOME: $ASCEND_TOOLKIT_HOME"
-          cat $ASCEND_TOOLKIT_HOME/set_env.sh || true
-          cat $ASCEND_TOOLKIT_HOME/cann/version.info || cat $ASCEND_TOOLKIT_HOME/ascend-toolkit/version.info || true
+          echo $PATH
+          echo "------------------------"
+          source $ASCEND_TOOLKIT_HOME/set_env.sh
+          echo $PATH
+          echo "------------------------"
+          source /usr/local/Ascend/cann/set_env.sh
+          echo $PATH
 
       - name: Config mirrors
         run: |

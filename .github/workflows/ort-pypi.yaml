@@ -1,4 +1,4 @@
-name: Build and publish to PyPI
+name: Build and publish onnxruntime image
 
 on:
   workflow_dispatch:
@@ -94,12 +94,12 @@ jobs:
 
           - arch: aarch
             runner: linux-aarch64-a2-1
-            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_aarch64:fix3
+            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_aarch64:123
             build_name: aarch64-py311-cann8.3rc1
 
           - arch: aarch
             runner: ubuntu-latest
-            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_aarch64:fix3
+            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_aarch64:123
             build_name: aarch64-py311-cann8.3rc1
   
     steps:
@@ -126,9 +126,11 @@ jobs:
 
       - name: Build ONNX Runtime wheel
         working-directory: onnxruntime
+        shell: bash
         run: |
           # git checkout ${{ needs.check.outputs.latest_tag }}
           git checkout -b v1.24.1 refs/tags/v1.24.1
+          source $ASCEND_TOOLKIT_HOME/set_env.sh
           ./build.sh --allow_running_as_root \
             --config Release \
             --build_shared_lib \
