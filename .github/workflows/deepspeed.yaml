@@ -59,6 +59,7 @@ jobs:
         run: |
           sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
           pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+          pip config set global.retries 5
 
       - name: Install system dependencies
         run: |
