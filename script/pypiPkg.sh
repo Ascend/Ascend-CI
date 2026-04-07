@@ -41,9 +41,8 @@ build_and_upload() {
   cd onnxruntime
   git config --global user.name "dou"
   git config --global user.email "15529241576@163.com"
-  git fetch "$REPO_URL" pull/25627/head:pr-123
-  git cherry-pick pr-123
   
+  pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple setuptools
   ./build.sh --allow_running_as_root \
              --config Release \
              --build_shared_lib \
