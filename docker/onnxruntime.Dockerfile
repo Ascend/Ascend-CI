@@ -2,7 +2,6 @@ ARG ARCH="aarch64"
 ARG PYTHON_VERSION="312"
 FROM quay.io/pypa/manylinux_2_28_${ARCH}:latest
 
-# ARG Definition
 ARG ARCH
 ARG PYTHON_VERSION
 ENV PYTHON_PATH=/opt/python/cp${PYTHON_VERSION}-cp${PYTHON_VERSION}

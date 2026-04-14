@@ -94,12 +94,12 @@ jobs:
 
           - arch: aarch
             runner: linux-aarch64-a2-1
-            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_aarch64:123
+            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_x86_64:latest
             build_name: aarch64-py311-cann8.3rc1
 
           - arch: aarch
             runner: ubuntu-latest
-            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_aarch64:123
+            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_x86_64:latest
             build_name: aarch64-py311-cann8.3rc1
   
     steps:
