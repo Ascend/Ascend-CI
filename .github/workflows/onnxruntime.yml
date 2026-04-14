@@ -42,6 +42,17 @@ jobs:
         run: |
           echo "runner=${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}" >> $GITHUB_OUTPUT
 
+  test_backend:
+    name: Test backend
+    needs: prepare
+    runs-on: ${{ needs.prepare.outputs.runner }}
+
+    steps:
+      - name: Show NPU info
+        shell: bash
+        run: |
+          uname -a
+
   build-and-test:
     name: Build and test onnx runtime from source 
     needs: prepare
