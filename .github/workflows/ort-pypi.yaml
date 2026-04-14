@@ -72,34 +72,14 @@ jobs:
     strategy:
       matrix:
         include:
-          # - arch: x86_64
-          #   runner: ONNXRuntime
-          #   image: bachelor233/manylinux2_28-py310-cann8_1_x86_64
-          #   build_name: x86_64-py310-cann8.1
-
-          # - arch: aarch
-          #   runner: pypi-aarch
-          #   image: bachelor233/manylinux2_28-py310-cann8_1_aarch
-          #   build_name: aarch64-py310-cann8.1
-
-          # - arch: x86_64
-          #   runner: ONNXRuntime
-          #   image: bachelor233/manylinux2_28-py311-cann8.2.rc1-x86_64
-          #   build_name: x86_64-py311-cann8.2rc1
-
-          # - arch: aarch
-          #   runner: pypi-aarch
-          #   image: bachelor233/manylinux2_28-py311-cann8.2.rc1-aarch64
-          #   build_name: aarch64-py311-cann8.2rc1
-
           - arch: aarch
             runner: linux-aarch64-a2-1
             image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_x86_64:latest
             build_name: aarch64-py311-cann8.3rc1
 
           - arch: aarch
-            runner: ubuntu-latest
-            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_x86_64:latest
+            runner: linux-aarch64-a2-1
+            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_aarch64:123
             build_name: aarch64-py311-cann8.3rc1
   
     steps:
