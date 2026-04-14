@@ -81,6 +81,11 @@ jobs:
             runner: ubuntu-22.04
             image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_x86_64:latest
             build_name: aarch64-py312-cann8.5.0
+
+          - arch: aarch
+            runner: linux-aarch64-a2-1
+            image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
+            build_name: aarch64-py312-cann9.0.0
       fail-fast: false
 
     steps:
