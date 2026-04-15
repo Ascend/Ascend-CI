@@ -74,10 +74,10 @@ jobs:
         include:
           - arch: x86_64
             runner: linux-aarch64-a2-1
-            image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_x86_64:latest
+            image: swr.cn-southwest-2.myhuaweicloud.com/onnxruntime_image/manylinux_2_28_x86_64:latest
             build_name: x86_64-py312-cann8.5.0
 
-          - arch: aarch
+          - arch: x86_64
             runner: ubuntu-22.04
             image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_x86_64:latest
             build_name: aarch64-py312-cann8.5.0
