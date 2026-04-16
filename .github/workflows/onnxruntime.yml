@@ -65,7 +65,7 @@ jobs:
     #       - 8.3.rc1-910b-ubuntu22.04-py3.11
     #   fail-fast: false
     container:
-      image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28:latest
+      image: swr.cn-southwest-2.myhuaweicloud.com/onnxruntime_image/manylinux_2_28:latest
       options: --entrypoint /bin/sh
       env:
         LANG: en_US.UTF-8
@@ -134,9 +134,6 @@ jobs:
       - name: Build and test onnx runtime
         working-directory: onnxruntime
         run: |
-          # 获取并检出上游 PR 27091 到本地分支 pr-123
-          git fetch origin pull/27091/head:pr-123
-          git checkout pr-123
           ./build.sh --allow_running_as_root \
             --config RelWithDebInfo \
             --build_shared_lib \
