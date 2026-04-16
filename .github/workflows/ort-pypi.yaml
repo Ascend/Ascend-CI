@@ -74,7 +74,7 @@ jobs:
         include:
           - arch: x86_64
             runner: linux-aarch64-a2-1
-            image: swr.cn-southwest-2.myhuaweicloud.com/onnxruntime_image/manylinux_2_28_x86_64:latest
+            image: swr.cn-southwest-2.myhuaweicloud.com/onnxruntime_image/manylinux_2_28:latest
             build_name: x86_64-py312-cann8.5.0
 
           - arch: x86_64
@@ -108,14 +108,13 @@ jobs:
         with:
           repository: microsoft/onnxruntime
           path: onnxruntime
+          ref: refs/tags/v1.24.1
           fetch-depth: 1
 
       - name: Build ONNX Runtime wheel
         working-directory: onnxruntime
         shell: bash
         run: |
-          # git checkout ${{ needs.check.outputs.latest_tag }}
-          git checkout -b v1.24.1 refs/tags/v1.24.1
           source $ASCEND_TOOLKIT_HOME/set_env.sh
           ./build.sh --allow_running_as_root \
             --config Release \

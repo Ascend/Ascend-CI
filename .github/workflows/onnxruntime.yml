@@ -65,7 +65,7 @@ jobs:
     #       - 8.3.rc1-910b-ubuntu22.04-py3.11
     #   fail-fast: false
     container:
-      image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28_x86_64:latest
+      image: swr.cn-south-1.myhuaweicloud.com/onnx-repo/manylinux_2_28:latest
       options: --entrypoint /bin/sh
       env:
         LANG: en_US.UTF-8
