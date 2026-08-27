@@ -75,5 +75,21 @@ The Llama.cpp source code is from `main` branch of `ggml-org/llama.cpp` and will
 | Status  | ![Llama.cpp](https://github.com/Ascend/Ascend-CI/actions/workflows/llamacpp.yaml/badge.svg) |
 | Recheck By Hand | comment 'recheck' in any issue |
 
+## Liger-kernel Ascend CI
+The Liger-kernel source code is from `main` branch of `linkedin/Liger-Kernel` and will be run and tested daily with Ascend related.
+
+------------------------------------------------------------
+
+| Key  | Value |
+| :---: | :---: |
+| CPU  | Arm64 |
+| NPU | Ascend910B3 |
+| OS | Openeuler |
+| Period | UTC 1200 daily |
+| Branch  | main |
+| Status  | ![Liger-kernel](https://github.com/Ascend/Ascend-CI/actions/workflows/liger_kernel.yml/badge.svg) |
+| Recheck By Hand | comment 'recheck' in any issue |
+
+
 ## Pytorch Ascend CI
 TBD
