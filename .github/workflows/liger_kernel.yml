@@ -1,0 +1,126 @@
+name: Liger kernel test on Ascend NPU
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/liger_kernel.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/liger_kernel.yml"
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-aarch64-a2-1
+          - linux-aarch64-a2-2
+          - linux-aarch64-a2-4
+          - linux-aarch64-a2-8
+        default: "linux-aarch64-a2-1"
+        description: "The runner selected to run on"
+  schedule:
+    - cron: "0 8,22 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checkstyle:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+      with:
+        repository: linkedin/Liger-Kernel
+        ref: refs/pull/1392/head
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.10'
+
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        activate-environment: true
+
+    - name: Install dependencies
+      run: |
+        uv pip install -r dev/fmt-requirements.txt
+        uv pip list
+
+    - name: Run checkstyle
+      run: make checkstyle
+
+  tests:
+    name: Tests (${{ matrix.name }})
+    runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-2' }}
+    needs: [checkstyle]
+    if: success()
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: transformers
+            command: python -m pytest test/transformers --cov=src/liger_kernel  --cov-report=term-missing --disable-warnings --deselect=test/transformers/test_attn_res.py::test_correctness_backward --deselect=test/transformers/test_fused_linear_jsd.py
+          - name: benchmarks
+            command: make run-benchmarks
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.1.0-910b-ubuntu22.04-py3.12
+      options: >-
+        --privileged
+        -v /dev/davinci_manager:/dev/davinci_manager
+        -v /dev/devmm_svm:/dev/devmm_svm
+        -v /dev/hisi_hdc:/dev/hisi_hdc
+        --ipc=host
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Checkout Liger-Kernel
+      uses: actions/checkout@v6
+      with:
+        repository: linkedin/Liger-Kernel
+        ref: refs/pull/1392/head
+        path: Liger-Kernel
+        fetch-depth: 1
+
+    - name: Set up Python
+      run: |
+        # Python should be pre-installed in the container image
+        python --version
+
+    - name: Verify NPU availability
+      run: |
+        npu-smi info
+        echo "NPU devices available"
+        ls -l $ASCEND_TOOLKIT_HOME
+        ls -l $ASCEND_TOOLKIT_HOME/toolkit
+        cat $ASCEND_TOOLKIT_HOME/toolkit/version.info || true
+
+    - name: Setup Dependencies
+      working-directory: Liger-Kernel
+      run: |
+        pip install -e .[dev] --extra-index-url https://triton-ascend.osinfra.cn/pypi/simple
+
+    - name: Install torch_npu and triton-ascend
+      run: |
+        pip install attrs==24.2.0 numpy==1.26.4 scipy==1.13.1 decorator==5.1.1 psutil==6.0.0 pytest==9.0.2 pytest-xdist==3.6.1 pyyaml pybind11 transformers==5.3.0
+        pip install torch==2.9.0 torchvision==0.24.0 torchaudio==2.9.0 --index-url https://download.pytorch.org/whl/cpu
+        pip install torch_npu==2.9.0
+        pip install triton-ascend==3.2.2 --extra-index-url https://triton-ascend.osinfra.cn/pypi/simple
+        python3 -c "import torch; import torch_npu; print(torch_npu.npu.is_available())"
+        python -c "import torch_npu; print('torch_npu version:', torch_npu.__version__)"
+
+    - name: List Python Environments
+      run: pip list
+
+    - name: Run Unit Tests
+      working-directory: Liger-Kernel
+      run: |
+        ${{ matrix.command }}
