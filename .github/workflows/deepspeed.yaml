@@ -129,7 +129,8 @@ jobs:
           # HF tp_plan for tied embeddings now uses 'embedding_rowwise', which DeepSpeed
           # does not support yet -> the whole plan is rejected. Filter out until upstream
           # adds support.
-          pytest --verbose model_parallelism \
+          # model_parallelism/ was renamed to v1/autotp/ upstream (#8241, 2026-08-31)
+          pytest --verbose v1/autotp \
             -k "not test_qwen2_tied_lm_head_falls_back_to_replicated"
           pytest --verbose monitor
           pytest --verbose utils
