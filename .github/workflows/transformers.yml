@@ -1,0 +1,89 @@
+name: Transformers test on Ascend NPU
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/transformers.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/transformers.yml"
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-aarch64-a2-1
+          - linux-aarch64-a2-2
+          - linux-aarch64-a2-4
+          - linux-aarch64-a2-8
+        default: "linux-aarch64-a2-2"
+        description: "The runner selected to run on"
+  schedule:
+    - cron: "0 21 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-2' }}
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.1.0-910b-ubuntu22.04-py3.12
+      options: >-
+        --privileged
+        -v /dev/davinci_manager:/dev/davinci_manager
+        -v /dev/devmm_svm:/dev/devmm_svm
+        -v /dev/hisi_hdc:/dev/hisi_hdc
+        --ipc=host
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Checkout Transformers
+      uses: actions/checkout@v6
+      with:
+        repository: huggingface/transformers
+        ref: main
+        path: transformers
+        fetch-depth: 1
+
+    - name: Set up Python
+      run: |
+        # Python should be pre-installed in the container image
+        python --version
+
+    - name: Verify NPU availability
+      run: |
+        npu-smi info
+        echo "NPU devices available"
+        ls -l $ASCEND_TOOLKIT_HOME
+        ls -l $ASCEND_TOOLKIT_HOME/toolkit
+        cat $ASCEND_TOOLKIT_HOME/toolkit/version.info || true
+
+    - name: Install Transformers test dependencies
+      working-directory: transformers
+      run: |
+        pip install -e ".[testing]"
+
+    - name: Install torch_npu and triton-ascend
+      run: |
+        pip install torch==2.9.0 torchvision==0.24.0 torchaudio==2.9.0 --index-url https://download.pytorch.org/whl/cpu
+        pip install torch_npu==2.9.0
+        pip install triton-ascend==3.2.2 --extra-index-url https://triton-ascend.osinfra.cn/pypi/simple
+        python3 -c "import torch; import torch_npu; print(torch_npu.npu.is_available())"
+        python -c "import torch_npu; print('torch_npu version:', torch_npu.__version__)"
+
+    - name: List Python Environments
+      run: pip list
+
+    - name: Run Unit Tests
+      working-directory: transformers
+      env:
+        TRANSFORMERS_TEST_DEVICE: npu
+      run: |
+        python -m pytest tests
