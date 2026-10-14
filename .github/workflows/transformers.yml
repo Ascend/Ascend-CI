@@ -1,0 +1,214 @@
+name: Transformers test on Ascend NPU
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/transformers.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/transformers.yml"
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-aarch64-a2-1
+          - linux-aarch64-a2-2
+          - linux-aarch64-a2-4
+          - linux-aarch64-a2-8
+        default: "linux-aarch64-a2-2"
+        description: "The runner selected to run on"
+  schedule:
+    - cron: "0 21 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-2' }}
+    env:
+      HF_ENDPOINT: https://hf-mirror.com
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:9.1.0-910b-ubuntu22.04-py3.12
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Checkout Transformers
+      uses: actions/checkout@v6
+      with:
+        repository: huggingface/transformers
+        ref: main
+        path: transformers
+        fetch-depth: 1
+
+    - name: Set up Python
+      run: |
+        # Python should be pre-installed in the container image
+        python --version
+
+    - name: Verify NPU availability
+      run: |
+        npu-smi info
+        echo "NPU devices available"
+        ls -l $ASCEND_TOOLKIT_HOME
+        ls -l $ASCEND_TOOLKIT_HOME/toolkit
+        cat $ASCEND_TOOLKIT_HOME/toolkit/version.info || true
+
+    - name: Install Transformers test dependencies
+      working-directory: transformers
+      run: |
+        pip install -e ".[testing]"
+        pip install librosa
+
+    - name: Install torch_npu
+      shell: bash
+      run: |
+        PYTORCH_CPU_INDEX=https://download.pytorch.org/whl/cpu
+        # torchcodec has Linux aarch64 wheels from 0.13 onward (requires torch >= 2.11).
+        pip install \
+          torch==2.11.0 torchvision==0.26.0 torchaudio==2.11.0 torchcodec==0.13.0 \
+          --index-url "${PYTORCH_CPU_INDEX}"
+        pip install torch_npu==2.11.0.post2
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg espeak-ng
+        pip install phonemizer
+        # pyarrow and opencv need NumPy 2. pytest plugins need pytest>=8.4.
+        # The CANN image's ms-service-profiler needs pandas 2.2.x.
+        pip install "numpy>=2" "pandas~=2.2" "pytest>=8.4.2,<9"
+        python3 -c "import torch; import torch_npu; print('npu available:', torch_npu.npu.is_available())"
+        python3 -c "import torchcodec; import phonemizer; print('torchcodec and phonemizer import ok')"
+
+    - name: List Python Environments
+      run: pip list
+
+    - name: Run Unit Tests
+      shell: bash
+      working-directory: transformers
+      env:
+        TRANSFORMERS_TEST_DEVICE: npu
+        RUNNER_LABEL: ${{ github.event.inputs.runner || 'linux-aarch64-a2-2' }}
+      run: |
+        NPUS="${RUNNER_LABEL##*-}"
+        [[ "$NPUS" =~ ^[0-9]+$ ]] || NPUS=2
+        export ASCEND_RT_VISIBLE_DEVICES="$(python3 -c "print(','.join(map(str, range($NPUS))))")"
+        XDIST=()
+        if [ "$NPUS" -gt 1 ]; then
+          printf '%s\n' \
+            'import os' \
+            '_worker = os.environ.get("PYTEST_XDIST_WORKER")' \
+            'if _worker and _worker.startswith("gw"):' \
+            '    os.environ["ASCEND_RT_VISIBLE_DEVICES"] = _worker[2:]' \
+            > /tmp/transformers_npu_xdist.py
+          export PYTHONPATH=/tmp${PYTHONPATH:+:$PYTHONPATH}
+          XDIST=(-n "$NPUS" --dist load -p transformers_npu_xdist)
+        fi
+        source "${ASCEND_TOOLKIT_HOME}/set_env.sh"
+        python -m pytest "${XDIST[@]}" tests \
+          --ignore=tests/conftest_tests \
+          --ignore=tests/fixtures \
+          --ignore=tests/quantization \
+          --ignore=tests/sagemaker \
+          --ignore=tests/kernels \
+          --ignore=tests/pipeline_parallel \
+          --ignore=tests/models \
+          --ignore=tests/test_backbone_common.py \
+          --ignore=tests/test_configuration_common.py \
+          --ignore=tests/test_executorch.py \
+          --ignore=tests/test_feature_extraction_common.py \
+          --ignore=tests/test_fsdp_mixin.py \
+          --ignore=tests/test_image_processing_common.py \
+          --ignore=tests/test_modeling_common.py \
+          --ignore=tests/test_pipeline_mixin.py \
+          --ignore=tests/test_processing_common.py \
+          --ignore=tests/test_sentencepiece_backend_mixin.py \
+          --ignore=tests/test_sequence_feature_extraction_common.py \
+          --ignore=tests/test_tensor_parallel_mixin.py \
+          --ignore=tests/test_training_mixin.py \
+          --ignore=tests/test_video_processing_common.py \
+          --deselect=tests/utils/test_import_utils.py::test_availability_helpers_are_compile_safe \
+          --deselect=tests/test_tokenization_mistral_common.py::TestMistralCommonBackend:: \
+          --deselect=tests/utils/test_deprecation.py::DeprecationDecoratorTester::test_compile_safe \
+          --deselect=tests/exporters/test_utils.py::AutoHfExporterTest::test_from_config_dispatches_dynamo \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_block_sharing_with_hybrid_model \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_continuous_batching_fast \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_non_streaming_request \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_pause_during_generation \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_pause_with_several_holders \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_prefix_sharing \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_register_result_handler \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_streaming_and_non_streaming_requests_can_alternate \
+          --deselect=tests/generation/test_continuous_batching.py::ContinuousBatchingWithAcceleratorTest::test_streaming_request \
+          --deselect=tests/generation/test_continuous_batching.py::TestMemoryHandlerPrediction::test_memory_prediction_0 \
+          --deselect=tests/generation/test_continuous_batching.py::TestMemoryHandlerPrediction::test_memory_prediction_1 \
+          --deselect=tests/generation/test_continuous_batching.py::TestMemoryHandlerPrediction::test_memory_prediction_2 \
+          --deselect=tests/generation/test_continuous_batching.py::TestMemoryHandlerPrediction::test_memory_prediction_3 \
+          --deselect=tests/generation/test_continuous_batching.py::TestMemoryHandlerPrediction::test_memory_prediction_4 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermark_processor_bias_test_0 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermark_processor_bias_test_1 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermark_processor_bias_test_2 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermark_processor_bias_uniformity_across_vocab_0 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermark_processor_bias_uniformity_across_vocab_1 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermark_processor_distributional_convergence_0 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermark_processor_distributional_convergence_1 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermark_processor_distributional_convergence_3 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermarking_processor_bias_uniformity_0 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_synthidtext_watermarking_processor_bias_uniformity_1 \
+          --deselect=tests/generation/test_logits_process.py::LogitsProcessorTest::test_watermarking_processor \
+          --deselect=tests/generation/test_utils.py::GenerationIntegrationTests::test_cpu_offload_doesnt_compile \
+          --deselect=tests/generation/test_utils.py::GenerationIntegrationTests::test_generate_multi_accelerator_causal_mask \
+          --deselect=tests/generation/test_utils.py::GenerationIntegrationTests::test_mtp_use_correct_device_when_drafting \
+          --deselect=tests/pipelines/test_pipelines_audio_classification.py::AudioClassificationPipelineTests::test_small_model_pt \
+          --deselect=tests/pipelines/test_pipelines_common.py::CommonPipelineTest::test_check_task_deprecated_tasks \
+          --deselect=tests/pipelines/test_pipelines_common.py::CommonPipelineTest::test_get_task_deprecated_hub_tag \
+          --deselect=tests/pipelines/test_pipelines_common.py::CommonPipelineTest::test_pipeline_deprecated_task_is_redirected \
+          --deselect=tests/pipelines/test_pipelines_common.py::PipelineUtilsTest::test_pipeline_no_device \
+          --deselect=tests/pipelines/test_pipelines_common.py::CustomPipelineTest::test_cached_pipeline_has_minimum_calls_to_head \
+          --deselect=tests/pipelines/test_pipelines_fill_mask.py::FillMaskPipelineTests::test_small_model_pt \
+          --deselect=tests/pipelines/test_pipelines_image_feature_extraction.py::ImageFeatureExtractionPipelineTests::test_image_processing_small_model_pt \
+          --deselect=tests/pipelines/test_pipelines_image_feature_extraction.py::ImageFeatureExtractionPipelineTests::test_small_model_pt \
+          --deselect=tests/pipelines/test_pipelines_image_text_to_text.py::ImageTextToTextPipelineTests::test_small_model_pt_token \
+          --deselect=tests/pipelines/test_pipelines_image_text_to_text.py::ImageTextToTextPipelineTests::test_small_model_pt_token_text_only \
+          --deselect=tests/pipelines/test_pipelines_keypoint_matching.py::KeypointMatchingPipelineTests::test_multiple_pairs \
+          --deselect=tests/pipelines/test_pipelines_text_generation.py::TextGenerationPipelineTests::test_pipeline_skip_special_tokens \
+          --deselect=tests/pipelines/test_pipelines_token_classification.py::TokenClassificationPipelineTests::test_chunking_fast \
+          --deselect=tests/pipelines/test_pipelines_token_classification.py::TokenClassificationPipelineTests::test_no_offset_tokenizer \
+          --deselect=tests/pipelines/test_pipelines_token_classification.py::TokenClassificationPipelineTests::test_small_model_pt \
+          --deselect=tests/pipelines/test_pipelines_token_classification.py::TokenClassificationPipelineTests::test_small_model_pt_bf16 \
+          --deselect=tests/pipelines/test_pipelines_token_classification.py::TokenClassificationPipelineTests::test_small_model_pt_fp16 \
+          --deselect=tests/pipelines/test_pipelines_zero_shot_object_detection.py::ZeroShotObjectDetectionPipelineTests::test_small_model_pt \
+          --deselect=tests/trainer/distributed/test_trainer_distributed_fsdp.py::TestTrainerDistributedFSDP::test_torchrun_accelerate_fsdp1_env_parity \
+          --deselect=tests/trainer/distributed/test_trainer_distributed_fsdp.py::TestTrainerDistributedFSDP::test_torchrun_accelerate_fsdp2_env_parity \
+          --deselect=tests/trainer/test_trainer.py::TrainerMixedPrecisionTest::test_mixed_fp16 \
+          --deselect=tests/trainer/test_trainer.py::TrainerTorchCompileTest::test_torch_compile_eval \
+          --deselect=tests/trainer/test_trainer.py::TrainerTorchCompileTest::test_torch_compile_loss_func_compatibility \
+          --deselect=tests/trainer/test_trainer.py::TrainerTorchCompileTest::test_torch_compile_train \
+          --deselect=tests/trainer/test_trainer_checkpointing.py::TrainerBestModelTest::test_load_best_model_with_save \
+          --deselect=tests/trainer/test_trainer_checkpointing.py::TrainerBestModelTest::test_load_best_model_with_save_best \
+          --deselect=tests/trainer/test_trainer_seq2seq.py::TestTranslationExample::test_run_seq2seq_ddp \
+          --deselect=tests/utils/test_cache_utils.py::CacheTest::test_offloaded_cache_prefetches_across_linear_attention_layers \
+          --deselect=tests/utils/test_core_model_loading.py::TestConvertAndLoadStateDict::test_qkv_chunk_rope_permute_with_fp8_quantization \
+          --deselect=tests/utils/test_distributed_sharding_utils.py::TestDtensorShardOperation::test_1D_strided_shard \
+          --deselect=tests/utils/test_distributed_sharding_utils.py::TestDtensorShardOperation::test_2D_strided_shard_different_dims \
+          --deselect=tests/utils/test_distributed_sharding_utils.py::TestDtensorShardOperation::test_2D_strided_shard_same_dim \
+          --deselect=tests/utils/test_image_utils.py::LoadImageTester::test_load_img_url_timeout \
+          --deselect=tests/utils/test_masking_utils.py::MaskTest::test_bidirectional_mask_cudagraphs \
+          --deselect=tests/utils/test_masking_utils.py::MaskTest::test_nonpacked_sequence_mask_skip \
+          --deselect=tests/utils/test_masking_utils.py::MaskTest::test_packed_sequence_mask_flex_attention \
+          --deselect=tests/utils/test_modeling_rope_utils.py::RopeTest::test_dynamic_rope_resets_after_long_sequence_nested_0 \
+          --deselect=tests/utils/test_modeling_rope_utils.py::RopeTest::test_dynamic_rope_resets_after_long_sequence_nested_1 \
+          --deselect=tests/utils/test_modeling_rope_utils.py::RopeTest::test_longrope_rope_numerically \
+          --deselect=tests/utils/test_modeling_rope_utils.py::RopeTest::test_longrope_rope_numerically_nested_0 \
+          --deselect=tests/utils/test_modeling_rope_utils.py::RopeTest::test_longrope_rope_numerically_nested_1 \
+          --deselect=tests/utils/test_modeling_utils.py::GradientCheckpointingOffloadTest::test_frees_exactly_the_saved_activations \
+          --deselect=tests/utils/test_modeling_utils.py::ModelUtilsTest::test_decoder_only_model_can_be_used_as_encoder \
+          --deselect=tests/pipelines/test_pipelines_automatic_speech_recognition.py::AutomaticSpeechRecognitionPipelineTests::test_pipeline_assisted_generation \
+          --deselect=tests/pipelines/test_pipelines_text_to_audio.py::TextToAudioPipelineTests::test_forward_model_kwargs \
+          --deselect=tests/utils/test_hub_utils.py::GetFromCacheTests::test_has_file \
+          --deselect=tests/utils/test_hub_utils.py::GetFromCacheTests::test_has_file_gated_repo

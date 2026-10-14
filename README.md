@@ -91,5 +91,21 @@ The Liger-kernel source code is from `main` branch of `linkedin/Liger-Kernel` an
 | Recheck By Hand | comment 'recheck' in any issue |
 
 
+## Transformers Ascend CI
+The Transformers source code is from `main` branch of `huggingface/transformers` and will be run and tested daily with Ascend related.
+
+------------------------------------------------------------
+
+| Key  | Value |
+| :---: | :---: |
+| CPU  | Arm64 |
+| NPU | Ascend910B |
+| OS | Ubuntu 22.04 |
+| Period | UTC 2100 daily |
+| Branch  | main |
+| Status  | ![Transformers](https://github.com/Ascend/Ascend-CI/actions/workflows/transformers.yml/badge.svg) |
+| Recheck By Hand | workflow_dispatch |
+
+
 ## Pytorch Ascend CI
 TBD
