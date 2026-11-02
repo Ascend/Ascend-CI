@@ -131,7 +131,9 @@ jobs:
 
       - name: Install pytorch
         run: |
-          pip install torch torch_npu==2.7.1rc1 torchvision \
+          # Match xpu-max1100.yml's torch 2.10 line. torch_npu 2.10.0.post7 is the
+          # release paired with torch 2.10.0; torchvision 0.25.0 matches that torch.
+          pip install torch==2.10.0 torch_npu==2.10.0.post7 torchvision==0.25.0 \
               numpy==1.* cloudpickle tornado ml-dtypes PyYAML decorator -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
       - name: List torch_npu version
@@ -233,7 +235,9 @@ jobs:
 
       - name: Install pytorch
         run: |
-          pip install torch torch_npu==2.7.1rc1 torchvision \
+          # Match xpu-max1100.yml's torch 2.10 line. torch_npu 2.10.0.post7 is the
+          # release paired with torch 2.10.0; torchvision 0.25.0 matches that torch.
+          pip install torch==2.10.0 torch_npu==2.10.0.post7 torchvision==0.25.0 \
               numpy==1.* cloudpickle tornado ml-dtypes PyYAML decorator -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
       - name: List torch_npu version
