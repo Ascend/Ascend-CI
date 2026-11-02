@@ -71,7 +71,7 @@ on:
           - linux-aarch64-a2-4
           - linux-aarch64-a2-8
         default: 'linux-aarch64-a2-1'
-        description: 'Runner to run on'
+        description: 'Runner to run on (smoke: a2-1+; full: a2-4+ for world_size=4 tests)'
       suite:
         required: true
         type: choice
@@ -197,8 +197,12 @@ jobs:
           # must run with cwd = tests/accelerator (no __file__-based path resolution).
           (cd ../accelerator && pytest --verbose .)
           pytest --verbose utils
-          # NPU-only unit tests.
-          pytest --verbose ops/quantizer/test_npu_quantizer.py
+          # NPU-only unit tests. The quantizer test is not in every checkout yet.
+          if [ -f ops/quantizer/test_npu_quantizer.py ]; then
+            pytest --verbose ops/quantizer/test_npu_quantizer.py
+          else
+            echo "::notice::ops/quantizer/test_npu_quantizer.py not present; skipping"
+          fi
           pytest --verbose v1/pin_memory/test_pin_memory.py
           pytest --verbose runtime/test_ds_config_model.py
           pytest --verbose runtime/zero/test_zero_config.py
@@ -278,6 +282,14 @@ jobs:
         run: |
           python -c "import torch, torch_npu; print('NPU available:', torch.npu.is_available())"
           python -c "from deepspeed.accelerator import get_accelerator; print('accelerator:', get_accelerator()._name)"
+          python - <<'PY'
+          import torch
+          import torch_npu
+          count = torch.npu.device_count()
+          print('visible NPU count:', count)
+          if count < 4:
+              print('::warning::full suite has world_size=4 tests; select linux-aarch64-a2-4 or larger to run them')
+          PY
           pip list
 
       - name: Run unit tests
@@ -317,8 +329,12 @@ jobs:
           run pytest --verbose v1/autotp -k "not test_matches_single_device_training"
           run pytest --verbose monitor
           run pytest --verbose utils
-          # NPU-only unit tests.
-          run pytest --verbose ops/quantizer/test_npu_quantizer.py
+          # NPU-only unit tests. The quantizer test is not in every checkout yet.
+          if [ -f ops/quantizer/test_npu_quantizer.py ]; then
+            run pytest --verbose ops/quantizer/test_npu_quantizer.py
+          else
+            echo "::notice::ops/quantizer/test_npu_quantizer.py not present; skipping"
+          fi
           run pytest --verbose v1/pin_memory/test_pin_memory.py
           run pytest --verbose runtime/test_ds_config_model.py
           run pytest --verbose runtime/pipe/test_pipe_schedule.py

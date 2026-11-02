@@ -31,8 +31,8 @@ on:
           - linux-aarch64-a2-2
           - linux-aarch64-a2-4
           - linux-aarch64-a2-8
-        default: 'linux-aarch64-a2-1'
-        description: 'Runner to run on'
+        default: 'linux-aarch64-a2-2'
+        description: 'Runner to run on (compile uses 2 NPUs; choose a2-2 or larger)'
       config:
         required: true
         type: choice
@@ -61,14 +61,12 @@ jobs:
   compile-tests:
     name: deepspeed-compile / compile tests
     # PORT: upstream, replace with the NPU self-hosted runner labels.
-    runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}
+    runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-2' }}
     timeout-minutes: 90
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
     env:
       CONFIG: ${{ github.event.inputs.config || 'both' }}
-      # Keep the launcher to two devices, like xpu-compile.yml's ZE_AFFINITY_MASK.
-      ASCEND_RT_VISIBLE_DEVICES: "0,1"
 
     steps:
       - name: Checkout
@@ -126,10 +124,20 @@ jobs:
         run: |
           python -c "import torch, torch_npu; print('NPU available:', torch.npu.is_available())"
           python -c "from deepspeed.accelerator import get_accelerator; print('accelerator:', get_accelerator()._name)"
+          python - <<'PY'
+          import torch
+          import torch_npu
+          count = torch.npu.device_count()
+          print('visible NPU count:', count)
+          assert count >= 2, "compile needs 2 NPUs; select linux-aarch64-a2-2 or larger"
+          PY
           pip list
 
       - name: Run compile tests
         working-directory: deepspeed/tests/torch_compile
+        env:
+          # Keep the launcher to two devices, like xpu-compile.yml's ZE_AFFINITY_MASK.
+          ASCEND_RT_VISIBLE_DEVICES: "0,1"
         run: |
           set -o pipefail
           unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
