@@ -17,9 +17,10 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        required: true
+        required: false
         type: string
-        description: 'Actions run ID to triage (from the run URL)'
+        default: ''
+        description: 'Actions run ID; leave empty to use the latest failed/timed-out run'
       workflow_name:
         required: true
         type: choice
@@ -64,8 +65,18 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            RUN_ID="$INPUT_RUN_ID"
             WORKFLOW_NAME="$INPUT_WORKFLOW_NAME"
+            RUN_ID="$INPUT_RUN_ID"
+            if [ -z "$RUN_ID" ]; then
+              RUN_ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$WORKFLOW_NAME" \
+                --limit 20 --json databaseId,conclusion \
+                --jq '[.[] | select(.conclusion == "failure" or .conclusion == "timed_out")][0].databaseId // empty')
+              if [ -z "$RUN_ID" ]; then
+                echo "no failed/timed-out run found for $WORKFLOW_NAME" >&2
+                exit 1
+              fi
+              echo "auto-selected latest failed run: $RUN_ID"
+            fi
             meta=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" \
               --json url,headSha,conclusion)
             RUN_URL=$(jq -r .url <<<"$meta")
