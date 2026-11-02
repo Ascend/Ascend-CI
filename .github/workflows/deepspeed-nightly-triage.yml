@@ -1,0 +1,166 @@
+name: deepspeed-nightly-triage
+
+# File one deduplicated issue when a scheduled nightly run fails.
+#
+# While staged in Ascend-CI the unit and compile workflows are manual-only, so
+# the workflow_run path stays skipped. Run this workflow manually with a failed
+# run ID to exercise triage. Upstream, enable `schedule` on
+# deepspeed-upstream-ci.yml and deepspeed-compile.yml and it starts reporting
+# automatically.
+#
+# The title is deliberately SHA-free: a recurring regression comments on the
+# existing open issue instead of filing a new one every night. Modeled on the
+# upstream klxpu-triage/nightly_report.sh behavior, but self-contained so the
+# staging repo needs no extra scripts.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        required: true
+        type: string
+        description: 'Actions run ID to triage (from the run URL)'
+      workflow_name:
+        required: true
+        type: choice
+        options:
+          - deepspeed-upstream-ci
+          - deepspeed-compile
+        default: 'deepspeed-upstream-ci'
+        description: 'Workflow that produced the run'
+  workflow_run:
+    workflows: [deepspeed-upstream-ci, deepspeed-compile]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'schedule' &&
+       (github.event.workflow_run.conclusion == 'failure' ||
+        github.event.workflow_run.conclusion == 'timed_out') &&
+       github.event.workflow_run.head_branch == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      issues: write
+      contents: read
+
+    steps:
+      - name: Resolve run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+          EVENT_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          EVENT_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          EVENT_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_RUN_ID: ${{ github.event.inputs.run_id }}
+          INPUT_WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            RUN_ID="$INPUT_RUN_ID"
+            WORKFLOW_NAME="$INPUT_WORKFLOW_NAME"
+            meta=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" \
+              --json url,headSha,conclusion)
+            RUN_URL=$(jq -r .url <<<"$meta")
+            SHA=$(jq -r .headSha <<<"$meta")
+            conclusion=$(jq -r .conclusion <<<"$meta")
+            if [ "$conclusion" != "failure" ] && [ "$conclusion" != "timed_out" ]; then
+              echo "run $RUN_ID concluded '$conclusion', not a failure; refusing to triage" >&2
+              exit 1
+            fi
+          else
+            RUN_ID="$EVENT_RUN_ID"
+            WORKFLOW_NAME="$EVENT_WORKFLOW_NAME"
+            RUN_URL="$EVENT_RUN_URL"
+            SHA="$EVENT_SHA"
+          fi
+
+          {
+            echo "RUN_ID=$RUN_ID"
+            echo "WORKFLOW_NAME=$WORKFLOW_NAME"
+            echo "RUN_URL=$RUN_URL"
+            echo "SHA=$SHA"
+          } >> "$GITHUB_ENV"
+          echo "Triage target: $WORKFLOW_NAME run $RUN_ID ($RUN_URL)"
+
+      - name: Collect failing tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          : > failing-tests.txt
+
+          if [ "$WORKFLOW_NAME" = "deepspeed-upstream-ci" ]; then
+            # pytest runs from tests/unit, so normalize the legacy
+            # ../accelerator cwd and prefix the rest with tests/unit.
+            gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log \
+              | grep -oE 'FAILED [^[:space:]]+' \
+              | sed -E 's/^FAILED //; s/::.*//' \
+              | sort -u > raw-failures.txt || true
+
+            while IFS= read -r f; do
+              case "$f" in
+                ../accelerator/*) echo "tests/accelerator/${f#../accelerator/}" ;;
+                test_ds_init.py*) echo "tests/accelerator/$f" ;;
+                tests/*) echo "$f" ;;
+                *) echo "tests/unit/$f" ;;
+              esac
+            done < raw-failures.txt > failing-tests.txt
+          fi
+
+          cat failing-tests.txt
+
+      - name: File or update the triage issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          LABEL=nightly-triage
+          TITLE="nightly regression: ${WORKFLOW_NAME} failed"
+
+          if ! gh label list --repo "$GITHUB_REPOSITORY" --search "$LABEL" --json name --jq '.[].name' | grep -qx "$LABEL"; then
+            gh label create "$LABEL" --repo "$GITHUB_REPOSITORY" \
+              --description "Automated nightly triage" >/dev/null
+          fi
+
+          {
+            echo "The run of \`${WORKFLOW_NAME}\` at ${SHA} failed."
+            echo
+            echo "Run: ${RUN_URL}"
+            if [ -s failing-tests.txt ]; then
+              echo
+              echo "Failing tests:"
+              sed 's/^/- /' failing-tests.txt
+            else
+              echo
+              echo "No pytest FAILED lines were found. For the unit workflow this is"
+              echo "likely a setup/infrastructure/timeout failure; for the compile"
+              echo "workflow see the run log for the compile error."
+            fi
+          } > issue-body.txt
+
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "$LABEL" --state open \
+            --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -1)
+          stamp=$(date -u '+%Y-%m-%d %H:%M UTC')
+
+          if [ -n "$existing" ]; then
+            {
+              echo "Recurred $stamp; run: $RUN_URL"
+              echo
+              cat issue-body.txt
+            } | gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file - >/dev/null
+            echo "commented on existing issue #$existing: $TITLE"
+          else
+            number=$(gh issue create --repo "$GITHUB_REPOSITORY" --label "$LABEL" \
+              --title "$TITLE" --body-file issue-body.txt | grep -o '[0-9]*$')
+            echo "created issue #${number:-?}: $TITLE"
+          fi
