@@ -119,6 +119,15 @@ jobs:
           pip install .[autotuning]
           ds_report
 
+      - name: Install Ascend Triton
+        run: |
+          # torch_npu's Inductor path needs the Ascend Triton backend installed so
+          # Triton has a registered NPU driver; the PyPI index only carries older
+          # triton-ascend releases, so also use the Ascend package index.
+          pip install triton==3.6.0 triton-ascend==3.6.0 \
+              -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple \
+              --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi
+
       - name: Check NPU state
         working-directory: deepspeed
         run: |
@@ -130,6 +139,14 @@ jobs:
           count = torch.npu.device_count()
           print('visible NPU count:', count)
           assert count >= 2, "compile needs 2 NPUs; select linux-aarch64-a2-2 or larger"
+          PY
+          python - <<'PY'
+          import torch
+          import torch_npu
+          import triton
+          from triton.runtime import driver
+          print('triton:', triton.__version__)
+          print('triton target:', driver.active.get_current_target())
           PY
           pip list
 
