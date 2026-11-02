@@ -1,0 +1,165 @@
+name: deepspeed-compile
+
+# DeepSpeed torch.compile monitoring on Ascend NPU, modeled on upstream's
+# xpu-compile.yml. This workflow runs the ZeRO-2/ZeRO-3 compile smoke and writes
+# Dynamo graph-break stats to the GitHub step summary.
+#
+# While staged in Ascend-CI this is manual-only. To port it upstream:
+#   1. checkout: drop the self-checkout + deepspeed subdir checkout and use a
+#      single plain `uses: actions/checkout@v4`.
+#   2. runs-on: use the NPU self-hosted runner labels.
+#   3. triggers: restore the nightly and PR-on-self triggers:
+#        on:
+#          workflow_dispatch:
+#          schedule:
+#            - cron: "0 0 * * *"
+#          pull_request:
+#            paths: ['.github/workflows/deepspeed-compile.yml']
+#      (rename the file to npu-compile.yml if following xpu-compile.yml naming)
+#
+# A failed deepspeed run fails this job; the nightly triage workflow files or
+# updates the issue for scheduled runs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-aarch64-a2-1
+          - linux-aarch64-a2-2
+          - linux-aarch64-a2-4
+          - linux-aarch64-a2-8
+        default: 'linux-aarch64-a2-2'
+        description: 'Runner to run on (compile uses 2 NPUs; choose a2-2 or larger)'
+      config:
+        required: true
+        type: choice
+        options:
+          - both
+          - z2
+          - z3
+        default: 'both'
+        description: 'ZeRO configs to compile'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
+# declared as "shell: bash -el {0}" on steps that need to be properly activated.
+# It's used to activate ascend-toolkit environment variables.
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  compile-tests:
+    name: deepspeed-compile / compile tests
+    # PORT: upstream, replace with the NPU self-hosted runner labels.
+    runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-2' }}
+    timeout-minutes: 90
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
+    env:
+      CONFIG: ${{ github.event.inputs.config || 'both' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+          pip config set global.retries 5
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+              git gcc g++ make cmake ninja-build python-is-python3 python3-pip
+
+      - name: Check container state
+        run: |
+          npu-smi info
+          echo "source /usr/local/Ascend/cann/set_env.sh" >> ~/.bashrc
+
+      - name: Install pytorch
+        run: |
+          # Match xpu-compile.yml's torch 2.10 line. torch_npu 2.10.0.post7 is the
+          # release paired with torch 2.10.0; torchvision 0.25.0 matches that torch.
+          pip install torch==2.10.0 torch_npu==2.10.0.post7 torchvision==0.25.0 \
+              numpy==1.* cloudpickle tornado ml-dtypes PyYAML decorator -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: List torch_npu version
+        run: |
+          python -c "import torch; print('torch:', torch.__version__)"
+          python -c "import torch_npu; print('torch_npu:', torch_npu.__version__)"
+
+      - name: Checkout deepspeed
+        uses: actions/checkout@v4
+        with:
+          # PORT: upstream, drop this step (the workflow itself is checked out).
+          repository: deepspeedai/DeepSpeed
+          path: deepspeed
+
+      - name: Install deepspeed
+        working-directory: deepspeed
+        run: |
+          # Install DeepSpeed's dev requirements (test toolchain) straight from the
+          # checkout so they never drift from upstream; drop deepspeed-kernels,
+          # which only ships x86_64 wheels and fails on aarch64 NPU runners.
+          sed '/deepspeed-kernels/d' requirements/requirements-dev.txt > /tmp/requirements-dev-npu.txt
+          pip install -r /tmp/requirements-dev-npu.txt
+          pip install .[autotuning]
+          ds_report
+
+      - name: Check NPU state
+        working-directory: deepspeed
+        run: |
+          python -c "import torch, torch_npu; print('NPU available:', torch.npu.is_available())"
+          python -c "from deepspeed.accelerator import get_accelerator; print('accelerator:', get_accelerator()._name)"
+          python - <<'PY'
+          import torch
+          import torch_npu
+          count = torch.npu.device_count()
+          print('visible NPU count:', count)
+          assert count >= 2, "compile needs 2 NPUs; select linux-aarch64-a2-2 or larger"
+          PY
+          pip list
+
+      - name: Run compile tests
+        working-directory: deepspeed/tests/torch_compile
+        env:
+          # Keep the launcher to two devices, like xpu-compile.yml's ZE_AFFINITY_MASK.
+          ASCEND_RT_VISIBLE_DEVICES: "0,1"
+        run: |
+          set -o pipefail
+          unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
+          ulimit -n 1048575 || true
+
+          echo "# torch.compile graph breaks" >> "$GITHUB_STEP_SUMMARY"
+
+          status=0
+          if [ "$CONFIG" != "z2" ]; then
+            echo "## ZeRO stage 3" >> "$GITHUB_STEP_SUMMARY"
+            if ! deepspeed test_compile.py --deepspeed_config ds_config_z3.json 2>&1 | tee log_z3.txt; then
+              status=1
+            fi
+            awk '/^dynamo_output/ {$1=""; print $0}' log_z3.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "$CONFIG" != "z3" ]; then
+            echo "## ZeRO stage 2" >> "$GITHUB_STEP_SUMMARY"
+            if ! deepspeed test_compile.py --deepspeed_config ds_config_z2.json 2>&1 | tee log_z2.txt; then
+              status=1
+            fi
+            awk '/^dynamo_output/ {$1=""; print $0}' log_z2.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          exit "$status"
