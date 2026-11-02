@@ -1,10 +1,10 @@
-# Ascend CI system
-This is the repo to run CI jobs with Ascend backend.
+# Huawei Ascend CI system
+This is the repo to run CI jobs with Huawei Ascend backend.
 
 - [CI 看护日志](https://github.com/Ascend/Ascend-CI/blob/main/docs/ONNXRuntime_CI%E7%9C%8B%E6%8A%A4%E6%97%A5%E5%BF%97.md)
 - [ONNXRuntime 发包指导](https://github.com/cosdt/Quora/issues/8)
 
-## ONNXRuntime Ascend CI
+## ONNXRuntime Huawei Ascend CI
 The ONNXRuntime source code is from `main` branch of `microsoft/onnxruntime` and will be run and tested daily with Ascend related.
 
 ------------------------------------------------------------
@@ -44,7 +44,7 @@ This [PR](https://github.com/microsoft/onnxruntime/pull/15833) refactored the Ex
 Update on 2023.06.08  
 This [PR](https://github.com/microsoft/onnxruntime/pull/14731) introduced a missing registration of CANN Identity operator for version greater than 14. It has been fixed in this [PR](https://github.com/microsoft/onnxruntime/pull/16210).
 
-## Deepspeed Ascend CI
+## Deepspeed Huawei Ascend CI
 The Deepspeed source code is from `main` branch of `microsoft/deepspeed` and will be run and tested daily with Ascend related.
 
 ------------------------------------------------------------
@@ -60,7 +60,7 @@ The Deepspeed source code is from `main` branch of `microsoft/deepspeed` and wil
 | Recheck By Hand | comment 'recheck' in any issue |
 
 
-## Llama.cpp Ascend CI
+## Llama.cpp Huawei Ascend CI
 The Llama.cpp source code is from `main` branch of `ggml-org/llama.cpp` and will be run and tested daily with Ascend related.
 
 ------------------------------------------------------------
@@ -75,7 +75,7 @@ The Llama.cpp source code is from `main` branch of `ggml-org/llama.cpp` and will
 | Status  | ![Llama.cpp](https://github.com/Ascend/Ascend-CI/actions/workflows/llamacpp.yaml/badge.svg) |
 | Recheck By Hand | comment 'recheck' in any issue |
 
-## Liger-kernel Ascend CI
+## Liger-kernel Huawei Ascend CI
 The Liger-kernel source code is from `main` branch of `linkedin/Liger-Kernel` and will be run and tested daily with Ascend related.
 
 ------------------------------------------------------------
@@ -91,7 +91,7 @@ The Liger-kernel source code is from `main` branch of `linkedin/Liger-Kernel` an
 | Recheck By Hand | comment 'recheck' in any issue |
 
 
-## Transformers Ascend CI
+## Transformers Huawei Ascend CI
 The Transformers source code is from `main` branch of `huggingface/transformers` and will be run and tested daily with Ascend related.
 
 ------------------------------------------------------------
@@ -107,5 +107,5 @@ The Transformers source code is from `main` branch of `huggingface/transformers`
 | Recheck By Hand | workflow_dispatch |
 
 
-## Pytorch Ascend CI
+## Pytorch Huawei Ascend CI
 TBD
