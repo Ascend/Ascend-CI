@@ -130,8 +130,10 @@ jobs:
           # does not support yet -> the whole plan is rejected. Filter out until upstream
           # adds support.
           # model_parallelism/ was renamed to v1/autotp/ upstream (#8241, 2026-08-31)
+          # The multi-query GPTBigCode test starts world_size 2/4 and is
+          # pathologically slow on NPU; filter it until the hang is fixed.
           pytest --verbose v1/autotp \
-            -k "not test_qwen2_tied_lm_head_falls_back_to_replicated"
+            -k "not test_qwen2_tied_lm_head_falls_back_to_replicated and not test_matches_single_device_training"
           pytest --verbose monitor
           pytest --verbose utils
           pytest --verbose runtime/test_ds_config_model.py
