@@ -30,6 +30,10 @@ name: deepspeed-upstream-ci-all
 #   - The ignores below are the same hardware/feature exclusions CUDA full CI
 #     uses. Start from these; the first manual baseline run defines the extra
 #     NPU-specific ignore/deselect list (CUDA-only kernels, known NPU gaps).
+#   - Set audit=true for a one-off complete inventory: it clears pytest.ini's
+#     marker filters, drops the known ignores, and reports FAILED/ERROR/SKIPPED
+#     for the whole tests/unit tree. This is much slower and noisier than the
+#     normal run; keep it manual.
 #   - 360 minutes is GitHub's job cap. If the baseline exceeds it, split the run
 #     by test directory into a matrix instead of raising this value.
 
@@ -44,6 +48,11 @@ on:
           - linux-aarch64-a2-8
         default: 'linux-aarch64-a2-8'
         description: 'Runner to run on (full suite needs at least 4 NPUs; a2-8 recommended)'
+      audit:
+        required: false
+        type: boolean
+        default: false
+        description: 'Audit mode: clear pytest.ini marker filters, drop known ignores, and report skipped/unsupported tests (slow)'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -69,8 +78,9 @@ jobs:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
     env:
       SELECTED_RUNNER: ${{ github.event.inputs.runner || 'linux-aarch64-a2-8' }}
+      AUDIT: ${{ github.event.inputs.audit || 'false' }}
       # DeepSpeed's DistributedTest uses this as the per-test child timeout.
-      DS_UNITTEST_TIMEOUT: "600"
+      DS_UNITTEST_TIMEOUT: "300"
 
     steps:
       - name: Checkout
@@ -159,13 +169,16 @@ jobs:
           import torch
           import torch_npu
           count = torch.npu.device_count()
+          audit = os.environ.get('AUDIT') == 'true'
+          min_npus = 1 if audit else 4
           print('runner label:', os.environ.get('SELECTED_RUNNER'))
           print('ASCEND_RT_VISIBLE_DEVICES:', os.environ.get('ASCEND_RT_VISIBLE_DEVICES'))
           print('visible NPU count:', count)
-          assert count >= 4, (
-              f"full suite needs at least 4 NPUs (visible={count}); "
-              "check 'npu-smi info' and ASCEND_RT_VISIBLE_DEVICES, and select "
-              "linux-aarch64-a2-4 or a2-8")
+          print('audit mode:', audit)
+          assert count >= min_npus, (
+              f"{'audit' if audit else 'full suite'} needs at least {min_npus} NPUs "
+              f"(visible={count}); check 'npu-smi info' and ASCEND_RT_VISIBLE_DEVICES, "
+              "and select linux-aarch64-a2-4 or a2-8")
           if count < 8:
               print('::warning::only %d NPUs visible; world_size>%d tests will be skipped' % (count, count))
           PY
@@ -179,26 +192,43 @@ jobs:
           ulimit -n 1048575 || true
           rm -rf /tmp/deepspeed-pytest
           : > "$GITHUB_WORKSPACE/failing-tests.txt"
+          : > "$GITHUB_WORKSPACE/skipped-tests.txt"
+          : > "$GITHUB_WORKSPACE/all-tests.txt"
           : > /tmp/pytest-full.log
 
+          AUDIT="${AUDIT:-false}"
           NPU_COUNT=$(python -c "import torch, torch_npu; print(torch.npu.device_count())")
-          echo "Running full unit suite with -n $NPU_COUNT on $NPU_COUNT visible NPUs"
+          echo "Running full unit suite with -n $NPU_COUNT on $NPU_COUNT visible NPUs (audit=$AUDIT)"
 
-          # Same exclusions CUDA full CI uses. Add NPU-specific entries here as the
-          # baseline run identifies CUDA-only or known-broken tests.
           common=(
             --verbose
-            --instafail
-            --timeout=600
+            --timeout=300
             --continue-on-collection-errors
             --basetemp=/tmp/deepspeed-pytest
-            --ignore=unit/runtime/zero/test_nvme_checkpointing.py
-            --ignore=unit/v1/nvme/test_gds.py
-            --ignore=unit/launcher/test_user_args.py
-            --ignore=unit/runtime/zenflow
-            --ignore=unit/ops/adam/test_zf_torch_adam.py
-            -k "not test_matches_single_device_training"
+            -rs
           )
+
+          if [ "$AUDIT" = "true" ]; then
+            # Clear pytest.ini's addopts so marker-gated tests (nightly,
+            # inference*, stable_diffusion, evaluation) are collected and run.
+            common+=(-o addopts=)
+            # Inventory every node id before executing, including collection
+            # errors, so the audit has a complete denominator.
+            pytest --collect-only -q --continue-on-collection-errors -o addopts= unit/ \
+              > "$GITHUB_WORKSPACE/all-tests.txt" 2>&1 || true
+          else
+            common+=(--instafail)
+            # Same exclusions CUDA full CI uses. Add NPU-specific entries here as
+            # the baseline run identifies CUDA-only or known-broken tests.
+            common+=(
+              --ignore=unit/runtime/zero/test_nvme_checkpointing.py
+              --ignore=unit/v1/nvme/test_gds.py
+              --ignore=unit/launcher/test_user_args.py
+              --ignore=unit/runtime/zenflow
+              --ignore=unit/ops/adam/test_zf_torch_adam.py
+              -k "not test_matches_single_device_training"
+            )
+          fi
 
           status=0
           run_phase() {
@@ -213,24 +243,51 @@ jobs:
             echo "::endgroup::"
           }
 
-          run_phase "unit tests (parallel)" -n "$NPU_COUNT" "${common[@]}" unit/
+          if [ "$AUDIT" = "true" ]; then
+            # addopts is cleared above, so partition sequential tests explicitly.
+            run_phase "unit tests (parallel)" -n "$NPU_COUNT" -m "not sequential" "${common[@]}" unit/
+            rm -rf /tmp/deepspeed-pytest
+            run_phase "unit tests (sequential)" -m sequential "${common[@]}" unit/
+          else
+            run_phase "unit tests (parallel)" -n "$NPU_COUNT" "${common[@]}" unit/
+            rm -rf /tmp/deepspeed-pytest
+            run_phase "unit tests (sequential)" -m sequential "${common[@]}" unit/ \
+              --ignore=unit/ops/deepspeed4science/test_DS4Sci_EvoformerAttention.py
+          fi
 
-          rm -rf /tmp/deepspeed-pytest
-          run_phase "unit tests (sequential)" -m sequential "${common[@]}" unit/ \
-            --ignore=unit/ops/deepspeed4science/test_DS4Sci_EvoformerAttention.py
-
-          grep -E '(FAILED|ERROR) ' /tmp/pytest-full.log \
+          grep -oE '(FAILED|ERROR) [^[:space:]]+' /tmp/pytest-full.log \
             | sed -E 's/^(FAILED|ERROR) //; s/::.*//' \
             | sort -u > "$GITHUB_WORKSPACE/failing-tests.txt" || true
+
+          # `-rs` prints `SKIPPED [n] path:line: reason`; keep the reason too.
+          grep -E '(^|\[gw[0-9]+\] )SKIPPED ' /tmp/pytest-full.log \
+            | sed -E 's/^(\[gw[0-9]+\] )?//' \
+            | sort -u > "$GITHUB_WORKSPACE/skipped-tests.txt" || true
+
+          collected=0
+          if [ -s "$GITHUB_WORKSPACE/all-tests.txt" ]; then
+            collected=$(grep -c '::' "$GITHUB_WORKSPACE/all-tests.txt" || true)
+          fi
 
           {
             echo "## deepspeed-upstream-ci-all"
             echo
             echo "- runner: ${SELECTED_RUNNER}"
-            echo "- failing test files: $(wc -l < "$GITHUB_WORKSPACE/failing-tests.txt")"
+            echo "- audit mode: ${AUDIT}"
+            if [ "$AUDIT" = "true" ]; then
+              echo "- collected test nodes: ${collected}"
+            fi
+            echo "- failing/error files: $(wc -l < "$GITHUB_WORKSPACE/failing-tests.txt")"
+            echo "- skipped entries: $(wc -l < "$GITHUB_WORKSPACE/skipped-tests.txt")"
             if [ -s "$GITHUB_WORKSPACE/failing-tests.txt" ]; then
               echo
+              echo "### Failing/error files"
               head -100 "$GITHUB_WORKSPACE/failing-tests.txt" | sed 's/^/- /'
+            fi
+            if [ -s "$GITHUB_WORKSPACE/skipped-tests.txt" ]; then
+              echo
+              echo "### Skipped files"
+              head -100 "$GITHUB_WORKSPACE/skipped-tests.txt" | sed 's/^/- /'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -239,10 +296,13 @@ jobs:
             exit "$status"
           fi
 
-      - name: Upload failing test list
+      - name: Upload test inventories
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: failing-tests
-          path: failing-tests.txt
+          name: test-inventories
+          path: |
+            failing-tests.txt
+            skipped-tests.txt
+            all-tests.txt
           if-no-files-found: ignore
