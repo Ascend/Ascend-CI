@@ -1,47 +1,55 @@
 name: deepspeed-upstream-ci
 
-# DeepSpeed NPU unit tests, modeled on upstream's xpu-max1100.yml.
+# DeepSpeed NPU pull-request CI, modeled on upstream's xpu-max1100.yml.
 #
-# This workflow is staged in Ascend-CI so it can be exercised on the a2 NPU runners
-# before being submitted to deepspeedai/DeepSpeed. To port it upstream, make the
-# changes marked with "PORT:" below:
+# This workflow watches the NPU surface only: the NPU accelerator, the torch_npu
+# host-registration path, HCCL/comm hooks, NPU op builders, and the NPU-specific
+# tests. The CUDA-parity full suite lives in deepspeed-upstream-ci-all.yml; that
+# workflow owns the nightly run and is the intended README badge target once its
+# baseline is clean.
 #
+# While staged in Ascend-CI this workflow is manual-only. Upstream, restore the
+# trigger block below and select jobs by event:
+#
+#   on:
+#     workflow_dispatch:
+#     pull_request:
+#       paths:  # mirrors xpu-max1100.yml, plus NPU-specific paths
+#         - ".github/workflows/deepspeed-upstream-ci.yml"
+#         - "accelerator/npu_accelerator.py"
+#         - "accelerator/abstract_accelerator.py"
+#         - "accelerator/cpu_accelerator.py"
+#         - "accelerator/real_accelerator.py"
+#         - "csrc/aio/py_lib/deepspeed_cpu_op.cpp"     # torch_npu host-register path
+#         - "deepspeed/comm/comm.py"
+#         - "deepspeed/comm/constants.py"
+#         - "deepspeed/env_report.py"                # ds_report NPU/CANN reporting
+#         - "deepspeed/runtime/engine.py"
+#         - "deepspeed/runtime/bf16_optimizer.py"
+#         - "deepspeed/runtime/zero/stage_1_and_2.py"
+#         - "deepspeed/runtime/zero/stage3.py"
+#         - "deepspeed/runtime/zero/partition_parameters.py"
+#         - "deepspeed/runtime/zero/partitioned_param_coordinator.py"
+#         - "deepspeed/runtime/zero/parameter_offload.py"
+#         - "deepspeed/runtime/pipe/engine.py"
+#         - "deepspeed/runtime/utils.py"
+#         - "op_builder/npu/**"
+#         - "tests/unit/accelerator/**"
+#         - "tests/unit/ops/quantizer/**"
+#         - "tests/unit/v1/pin_memory/**"
+#         - "tests/accelerator/**"
+#
+# The job conditions below already handle both staging and upstream:
+#   pr-unit-tests: pull_request, or dispatch with suite=smoke
+#   unit-tests:    non-PR dispatch with suite=full
+#
+# PORT:
 #   1. checkout: replace the Ascend-CI self-checkout + the deepspeedai/DeepSpeed
 #      subdir checkout with a single plain `uses: actions/checkout@v4`.
 #   2. runs-on: use the labels registered for the NPU runners on deepspeedai/DeepSpeed
 #      (e.g. [self-hosted, ascend, npu]) instead of the a2 runner names.
-#   3. triggers: while staged, this workflow is manual-only (workflow_dispatch).
-#      Upstream, restore the trigger block and the event-based job conditions:
-#        on:
-#          workflow_dispatch:
-#          schedule:
-#            - cron: "0 0 * * *"          # nightly full suite + README badge
-#          pull_request:
-#            paths:  # mirrors xpu-max1100.yml, plus NPU-specific paths below
-#              - ".github/workflows/deepspeed-upstream-ci.yml"
-#              - "accelerator/npu_accelerator.py"
-#              - "accelerator/abstract_accelerator.py"
-#              - "accelerator/cpu_accelerator.py"
-#              - "accelerator/real_accelerator.py"
-#              - "csrc/aio/py_lib/deepspeed_cpu_op.cpp"     # torch_npu host-register path
-#              - "deepspeed/comm/comm.py"
-#              - "deepspeed/comm/constants.py"
-#              - "deepspeed/env_report.py"                # ds_report NPU/CANN reporting
-#              - "tests/unit/ops/quantizer/test_npu_quantizer.py"
-#              - "tests/unit/v1/pin_memory/test_pin_memory.py"
-#              - "deepspeed/runtime/engine.py"
-#              - "deepspeed/runtime/bf16_optimizer.py"
-#              - "deepspeed/runtime/zero/stage_1_and_2.py"
-#              - "deepspeed/runtime/zero/stage3.py"
-#              - "deepspeed/runtime/zero/partition_parameters.py"
-#              - "deepspeed/runtime/zero/partitioned_param_coordinator.py"
-#              - "deepspeed/runtime/zero/parameter_offload.py"
-#              - "deepspeed/runtime/pipe/engine.py"
-#              - "deepspeed/runtime/utils.py"
-#              - "op_builder/npu/**"
-#      and switch the job conditions back to:
-#        pr-unit-tests: if: github.event_name == 'pull_request'
-#        unit-tests:    if: github.event_name != 'pull_request'
+#   3. apply the trigger block above. Do not add a schedule here:
+#      deepspeed-upstream-ci-all.yml runs the nightly full suite.
 #
 # Design:
 #   - The pytest targets mirror xpu-max1100.yml. NPU-only additions: the legacy
@@ -50,14 +58,9 @@ name: deepspeed-upstream-ci
 #   - PR runs are non-blocking (continue-on-error only when the event is a PR) and
 #     execute a small smoke subset with a short timeout, so PR merges are never held
 #     up by NPU jobs.
-#   - Nightly runs (schedule + workflow_dispatch)
-#     execute the full suite. They are NOT continue-on-error, so the README badge
-#     (generated by GitHub from the latest run on the default branch) reflects real
-#     failures. The full job keeps going after a failing group and exits non-zero
-#     at the end, so deepspeed-nightly-triage can report every failure from a
-#     scheduled run in one issue.
-#   - While staged, pick `suite: smoke` to exercise the PR subset or `suite: full`
-#     (default) to exercise the nightly set.
+#   - The manual `unit-tests` job executes the full curated NPU set. It is not
+#     continue-on-error, so a failing manual run is visible. The nightly full
+#     CUDA-parity suite is a separate workflow.
 
 on:
   workflow_dispatch:
@@ -79,7 +82,7 @@ on:
           - full
           - smoke
         default: 'full'
-        description: 'Suite to run: full (nightly set) or smoke (PR subset)'
+        description: 'Suite to run: full (curated NPU set) or smoke (PR subset)'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -99,12 +102,12 @@ defaults:
 jobs:
   pr-unit-tests:
     name: deepspeed-upstream-ci / pr unit tests
-    # Staged: selected with suite=smoke. Upstream: github.event_name == 'pull_request'.
-    if: github.event.inputs.suite == 'smoke'
+    # PR events always run the smoke subset; manual dispatch can select it too.
+    if: github.event_name == 'pull_request' || github.event.inputs.suite == 'smoke'
     # PORT: upstream, replace with the NPU self-hosted runner labels.
     runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}
     # NPU jobs must never block PR merges: failures are reported, not enforced.
-    # Only relax the gate for PR runs; manual dispatch and nightly must surface failures.
+    # Only relax the gate for PR runs; manual dispatch must surface failures.
     continue-on-error: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 60
     container:
@@ -209,9 +212,9 @@ jobs:
           pytest --verbose runtime/test_data.py
 
   unit-tests:
-    name: deepspeed-upstream-ci / unit tests
-    # Staged: selected with suite=full (default). Upstream: github.event_name != 'pull_request'.
-    if: github.event.inputs.suite != 'smoke'
+    name: deepspeed-upstream-ci / npu unit tests
+    # Manual dispatch with suite=full (the default). PR events never run this job.
+    if: github.event_name != 'pull_request' && github.event.inputs.suite != 'smoke'
     # PORT: upstream, replace with the NPU self-hosted runner labels.
     runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}
     timeout-minutes: 360
@@ -306,7 +309,7 @@ jobs:
             ../accelerator/test_ds_init.py
 
           # Match xpu-max1100.yml's accelerator target (tests/unit/accelerator).
-          # The nightly set runs every group even after a failure, so triage can
+          # The manual NPU set runs every group even after a failure, so triage can
           # report all failing targets in one issue.
           status=0
           run() {
@@ -325,7 +328,7 @@ jobs:
           run pytest --verbose autotuning
           # TestGPTBigCodeMultiQueryTraining::test_matches_single_device_training hangs on
           # NPU (HCCL collective never completes; added by upstream #8928). Filter out until
-          # upstream fixes it, otherwise the nightly run burns the whole job timeout.
+          # upstream fixes it, otherwise the run burns the whole job timeout.
           run pytest --verbose v1/autotp -k "not test_matches_single_device_training"
           run pytest --verbose monitor
           run pytest --verbose utils

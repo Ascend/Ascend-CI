@@ -1,0 +1,227 @@
+name: deepspeed-upstream-ci-all
+
+# Full DeepSpeed unit suite on Ascend NPU, aligned with the CUDA full CI
+# (aws-torch-latest-full.yml, which runs tests/unit/ on 8 GPUs).
+#
+# This is the deeper nightly canary: deepspeed-upstream-ci.yml stays small for
+# pull requests, while this workflow runs the whole tests/unit tree to catch
+# regressions outside the curated NPU set. It deliberately does not run on
+# pull_request: changing this YAML must not start an 8-NPU multi-hour run.
+#
+# While staged in Ascend-CI this workflow is manual-only. Upstream, enable the
+# nightly schedule below; this is the intended README badge target once the
+# baseline is clean:
+#
+#   on:
+#     workflow_dispatch:
+#     schedule:
+#       - cron: "0 0 * * *"
+#
+# PORT:
+#   1. checkout: replace the Ascend-CI self-checkout + the deepspeedai/DeepSpeed
+#      subdir checkout with a single plain `uses: actions/checkout@v4`.
+#   2. runs-on: use the labels registered for the NPU runners on deepspeedai/DeepSpeed
+#      (e.g. [self-hosted, ascend, npu]) instead of the a2 runner names.
+#   3. restore the schedule trigger above.
+#
+# Scope:
+#   - tests/unit only, matching the CUDA full unit workflow. tests/torch_compile
+#     is covered by deepspeed-compile.yml, not here.
+#   - The ignores below are the same hardware/feature exclusions CUDA full CI
+#     uses. Start from these; the first manual baseline run defines the extra
+#     NPU-specific ignore/deselect list (CUDA-only kernels, known NPU gaps).
+#   - 360 minutes is GitHub's job cap. If the baseline exceeds it, split the run
+#     by test directory into a matrix instead of raising this value.
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: true
+        type: choice
+        options:
+          - linux-aarch64-a2-4
+          - linux-aarch64-a2-8
+        default: 'linux-aarch64-a2-8'
+        description: 'Runner to run on (full suite needs at least 4 NPUs; a2-8 recommended)'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Bash shells do not use ~/.profile or ~/.bashrc so these shells need to be explicitly
+# declared as "shell: bash -el {0}" on steps that need to be properly activated.
+# It's used to activate ascend-toolkit environment variables.
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  all-unit-tests:
+    name: deepspeed-upstream-ci-all / all unit tests
+    # PORT: upstream, replace with the NPU self-hosted runner labels.
+    runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-8' }}
+    timeout-minutes: 360
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
+    env:
+      SELECTED_RUNNER: ${{ github.event.inputs.runner || 'linux-aarch64-a2-8' }}
+      # DeepSpeed's DistributedTest uses this as the per-test child timeout.
+      DS_UNITTEST_TIMEOUT: "600"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Config mirrors
+        run: |
+          sed -i 's|ports.ubuntu.com|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+          pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+          pip config set global.retries 5
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+              git gcc g++ make cmake ninja-build python-is-python3 python3-pip
+
+      - name: Check container state
+        run: |
+          npu-smi info
+          echo "source /usr/local/Ascend/cann/set_env.sh" >> ~/.bashrc
+
+      - name: Install pytorch
+        run: |
+          # Match xpu-max1100.yml's torch 2.10 line. torch_npu 2.10.0.post7 is the
+          # release paired with torch 2.10.0; torchvision 0.25.0 matches that torch.
+          pip install torch==2.10.0 torch_npu==2.10.0.post7 torchvision==0.25.0 \
+              numpy==1.* cloudpickle tornado ml-dtypes PyYAML decorator -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+      - name: List torch_npu version
+        run: |
+          python -c "import torch; print('torch:', torch.__version__)"
+          python -c "import torch_npu; print('torch_npu:', torch_npu.__version__)"
+
+      - name: Install transformers
+        run: |
+          # Install the PyPI release from the configured tuna mirror instead of
+          # cloning transformers master: github.com is unreliable from this
+          # runner's network, and master has broken this workflow twice
+          # (torchaudio import chain, 'embedding_rowwise' tp_plan style).
+          pip install transformers
+
+      - name: Checkout deepspeed
+        uses: actions/checkout@v4
+        with:
+          # PORT: upstream, drop this step (the workflow itself is checked out).
+          repository: deepspeedai/DeepSpeed
+          path: deepspeed
+
+      - name: Install deepspeed
+        working-directory: deepspeed
+        run: |
+          # Install DeepSpeed's dev requirements (test toolchain) straight from the
+          # checkout so they never drift from upstream; drop deepspeed-kernels,
+          # which only ships x86_64 wheels and fails on aarch64 NPU runners.
+          sed '/deepspeed-kernels/d' requirements/requirements-dev.txt > /tmp/requirements-dev-npu.txt
+          pip install -r /tmp/requirements-dev-npu.txt
+          # requirements-dev.txt does not pin pytest-timeout/pytest-instafail;
+          # the full-suite run needs both to survive hangs and report failures early.
+          pip install pytest-timeout pytest-instafail
+          pip install .[autotuning]
+          ds_report
+
+      - name: Check NPU state
+        working-directory: deepspeed
+        run: |
+          python -c "import torch, torch_npu; print('NPU available:', torch.npu.is_available())"
+          python -c "from deepspeed.accelerator import get_accelerator; print('accelerator:', get_accelerator()._name)"
+          python - <<'PY'
+          import torch
+          import torch_npu
+          count = torch.npu.device_count()
+          print('visible NPU count:', count)
+          assert count >= 4, "full suite needs at least 4 NPUs; select linux-aarch64-a2-4 or a2-8"
+          if count < 8:
+              print('::warning::only %d NPUs visible; world_size>%d tests will be skipped' % (count, count))
+          PY
+          pip list
+
+      - name: Run full unit suite
+        working-directory: deepspeed/tests
+        run: |
+          set -o pipefail
+          unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
+          ulimit -n 1048575 || true
+          rm -rf /tmp/deepspeed-pytest
+          : > "$GITHUB_WORKSPACE/failing-tests.txt"
+          : > /tmp/pytest-full.log
+
+          NPU_COUNT=$(python -c "import torch, torch_npu; print(torch.npu.device_count())")
+          echo "Running full unit suite with -n $NPU_COUNT on $NPU_COUNT visible NPUs"
+
+          # Same exclusions CUDA full CI uses. Add NPU-specific entries here as the
+          # baseline run identifies CUDA-only or known-broken tests.
+          common=(
+            --verbose
+            --instafail
+            --timeout=600
+            --continue-on-collection-errors
+            --basetemp=/tmp/deepspeed-pytest
+            --ignore=unit/runtime/zero/test_nvme_checkpointing.py
+            --ignore=unit/v1/nvme/test_gds.py
+            --ignore=unit/launcher/test_user_args.py
+            --ignore=unit/runtime/zenflow
+            --ignore=unit/ops/adam/test_zf_torch_adam.py
+            -k "not test_matches_single_device_training"
+          )
+
+          status=0
+          run_phase() {
+            label=$1
+            shift
+            echo "::group::$label"
+            pytest "$@" 2>&1 | tee -a /tmp/pytest-full.log
+            rc=${PIPESTATUS[0]}
+            if [ "$rc" -ne 0 ]; then
+              status=1
+            fi
+            echo "::endgroup::"
+          }
+
+          run_phase "unit tests (parallel)" -n "$NPU_COUNT" "${common[@]}" unit/
+
+          rm -rf /tmp/deepspeed-pytest
+          run_phase "unit tests (sequential)" -m sequential "${common[@]}" unit/ \
+            --ignore=unit/ops/deepspeed4science/test_DS4Sci_EvoformerAttention.py
+
+          grep -E '(FAILED|ERROR) ' /tmp/pytest-full.log \
+            | sed -E 's/^(FAILED|ERROR) //; s/::.*//' \
+            | sort -u > "$GITHUB_WORKSPACE/failing-tests.txt" || true
+
+          {
+            echo "## deepspeed-upstream-ci-all"
+            echo
+            echo "- runner: ${SELECTED_RUNNER}"
+            echo "- failing test files: $(wc -l < "$GITHUB_WORKSPACE/failing-tests.txt")"
+            if [ -s "$GITHUB_WORKSPACE/failing-tests.txt" ]; then
+              echo
+              head -100 "$GITHUB_WORKSPACE/failing-tests.txt" | sed 's/^/- /'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$status" -ne 0 ]; then
+            echo "One or more unit test phases failed."
+            exit "$status"
+          fi
+
+      - name: Upload failing test list
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failing-tests
+          path: failing-tests.txt
+          if-no-files-found: ignore
