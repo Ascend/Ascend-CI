@@ -93,6 +93,21 @@ jobs:
           npu-smi info
           echo "source /usr/local/Ascend/cann/set_env.sh" >> ~/.bashrc
 
+      - name: Expose NPUs from runner label
+        run: |
+          # The runner image may pre-set ASCEND_RT_VISIBLE_DEVICES=0 for
+          # isolation. Derive the count from the a2-N label and override it so
+          # torch_npu sees the whole allocation.
+          # PORT: upstream, use the target runner's real NPU count instead of
+          # parsing an a2-N label (or let the runner set the variable itself).
+          NPUS="${SELECTED_RUNNER##*-}"
+          if ! [[ "$NPUS" =~ ^[0-9]+$ ]]; then
+            NPUS=1
+          fi
+          DEVICES=$(seq -s, 0 $((NPUS - 1)))
+          echo "ASCEND_RT_VISIBLE_DEVICES=$DEVICES" >> "$GITHUB_ENV"
+          echo "runner label $SELECTED_RUNNER -> exposing NPUs: $DEVICES"
+
       - name: Install pytorch
         run: |
           # Match xpu-max1100.yml's torch 2.10 line. torch_npu 2.10.0.post7 is the
@@ -140,11 +155,17 @@ jobs:
           python -c "import torch, torch_npu; print('NPU available:', torch.npu.is_available())"
           python -c "from deepspeed.accelerator import get_accelerator; print('accelerator:', get_accelerator()._name)"
           python - <<'PY'
+          import os
           import torch
           import torch_npu
           count = torch.npu.device_count()
+          print('runner label:', os.environ.get('SELECTED_RUNNER'))
+          print('ASCEND_RT_VISIBLE_DEVICES:', os.environ.get('ASCEND_RT_VISIBLE_DEVICES'))
           print('visible NPU count:', count)
-          assert count >= 4, "full suite needs at least 4 NPUs; select linux-aarch64-a2-4 or a2-8"
+          assert count >= 4, (
+              f"full suite needs at least 4 NPUs (visible={count}); "
+              "check 'npu-smi info' and ASCEND_RT_VISIBLE_DEVICES, and select "
+              "linux-aarch64-a2-4 or a2-8")
           if count < 8:
               print('::warning::only %d NPUs visible; world_size>%d tests will be skipped' % (count, count))
           PY
