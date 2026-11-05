@@ -2,11 +2,11 @@ name: deepspeed-nightly-triage
 
 # File one deduplicated issue when a scheduled nightly run fails.
 #
-# While staged in Ascend-CI the unit and compile workflows are manual-only, so
-# the workflow_run path stays skipped. Run this workflow manually with a failed
-# run ID to exercise triage. Upstream, enable `schedule` on
-# deepspeed-upstream-ci.yml and deepspeed-compile.yml and it starts reporting
-# automatically.
+# While staged in Ascend-CI the unit, full-suite, and compile workflows are
+# manual-only, so the workflow_run path stays skipped. Run this workflow manually
+# with a failed run ID to exercise triage. Upstream, enable `schedule` on
+# deepspeed-upstream-ci-all.yml and deepspeed-compile.yml (and, if desired, on
+# deepspeed-upstream-ci.yml) and it starts reporting automatically.
 #
 # The title is deliberately SHA-free: a recurring regression comments on the
 # existing open issue instead of filing a new one every night. Modeled on the
@@ -26,11 +26,12 @@ on:
         type: choice
         options:
           - deepspeed-upstream-ci
+          - deepspeed-upstream-ci-all
           - deepspeed-compile
         default: 'deepspeed-upstream-ci'
         description: 'Workflow that produced the run'
   workflow_run:
-    workflows: [deepspeed-upstream-ci, deepspeed-compile]
+    workflows: [deepspeed-upstream-ci, deepspeed-upstream-ci-all, deepspeed-compile]
     types: [completed]
 
 permissions:
@@ -109,18 +110,20 @@ jobs:
           set -euo pipefail
           : > failing-tests.txt
 
-          if [ "$WORKFLOW_NAME" = "deepspeed-upstream-ci" ]; then
-            # pytest runs from tests/unit, so normalize the legacy
-            # ../accelerator cwd and prefix the rest with tests/unit.
+          if [ "$WORKFLOW_NAME" = "deepspeed-upstream-ci" ] || [ "$WORKFLOW_NAME" = "deepspeed-upstream-ci-all" ]; then
+            # deepspeed-upstream-ci runs from tests/unit, deepspeed-upstream-ci-all
+            # runs from tests/. Normalize both (and the legacy ../accelerator cwd)
+            # to repo-relative paths.
             gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log \
-              | grep -oE 'FAILED [^[:space:]]+' \
-              | sed -E 's/^FAILED //; s/::.*//' \
+              | grep -oE '(FAILED|ERROR) [^[:space:]]+' \
+              | sed -E 's/^(FAILED|ERROR) //; s/::.*//' \
               | sort -u > raw-failures.txt || true
 
             while IFS= read -r f; do
               case "$f" in
                 ../accelerator/*) echo "tests/accelerator/${f#../accelerator/}" ;;
                 test_ds_init.py*) echo "tests/accelerator/$f" ;;
+                unit/*) echo "tests/$f" ;;
                 tests/*) echo "$f" ;;
                 *) echo "tests/unit/$f" ;;
               esac
@@ -148,9 +151,14 @@ jobs:
             echo
             echo "Run: ${RUN_URL}"
             if [ -s failing-tests.txt ]; then
+              total=$(wc -l < failing-tests.txt)
               echo
-              echo "Failing tests:"
-              sed 's/^/- /' failing-tests.txt
+              echo "Failing tests (${total}):"
+              # Cap the body: a full-suite run can fail hundreds of tests.
+              head -50 failing-tests.txt | sed 's/^/- /'
+              if [ "$total" -gt 50 ]; then
+                echo "- ... and $((total - 50)) more; see the run log or the failing-tests artifact"
+              fi
             else
               echo
               echo "No pytest FAILED lines were found. For the unit workflow this is"
