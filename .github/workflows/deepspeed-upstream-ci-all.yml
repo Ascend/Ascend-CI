@@ -72,6 +72,17 @@ on:
           - inference
         default: 'all'
         description: 'Directory shard; use one shard per run when a full audit exceeds the 6h job cap'
+      parallel:
+        required: false
+        type: choice
+        options:
+          - auto
+          - '1'
+          - '2'
+          - '4'
+          - '8'
+        default: 'auto'
+        description: 'xdist workers; auto serializes distributed-heavy shards (runtime/v1-moe/v1-zero)'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -99,6 +110,10 @@ jobs:
       SELECTED_RUNNER: ${{ github.event.inputs.runner || 'linux-aarch64-a2-8' }}
       AUDIT: ${{ github.event.inputs.audit || 'false' }}
       SHARD: ${{ github.event.inputs.shard || 'all' }}
+      PARALLEL: ${{ github.event.inputs.parallel || 'auto' }}
+      # HCCL defaults to NPU-side port 16666. Concurrent processes on the same
+      # device collide (EI0020: address already bound); let HCCL allocate ports.
+      HCCL_NPU_SOCKET_PORT_RANGE: "auto"
       # DeepSpeed's DistributedTest uses this as the per-test child timeout.
       DS_UNITTEST_TIMEOUT: "300"
 
@@ -250,6 +265,22 @@ jobs:
           esac
           echo "shard $SHARD targets: ${TARGETS[*]}"
 
+          PARALLEL="${PARALLEL:-auto}"
+          if [ "$PARALLEL" = "auto" ]; then
+            case "$SHARD" in
+              # These shards are dominated by DistributedTest: one world_size=4
+              # test already uses every NPU on a2-4, so concurrent xdist workers
+              # only create overlapping HCCL process groups.
+              runtime|v1-moe|v1-zero) PARALLEL=1 ;;
+              *) PARALLEL="$NPU_COUNT" ;;
+            esac
+          fi
+          PARALLEL_ARGS=()
+          if [ "$PARALLEL" -gt 1 ]; then
+            PARALLEL_ARGS=(-n "$PARALLEL")
+          fi
+          echo "xdist workers: $PARALLEL (visible NPUs: $NPU_COUNT)"
+
           common=(
             --verbose
             --timeout=300
@@ -298,13 +329,13 @@ jobs:
 
           if [ "$AUDIT" = "true" ]; then
             # addopts is cleared above, so partition sequential tests explicitly.
-            run_phase "unit tests (parallel)" -n "$NPU_COUNT" -m "not sequential" \
+            run_phase "unit tests (parallel)" "${PARALLEL_ARGS[@]}" -m "not sequential" \
               "${common[@]}" "${SHARD_IGNORES[@]}" "${TARGETS[@]}"
             rm -rf /tmp/deepspeed-pytest
             run_phase "unit tests (sequential)" -m sequential \
               "${common[@]}" "${SHARD_IGNORES[@]}" "${TARGETS[@]}"
           else
-            run_phase "unit tests (parallel)" -n "$NPU_COUNT" \
+            run_phase "unit tests (parallel)" "${PARALLEL_ARGS[@]}" \
               "${common[@]}" "${SHARD_IGNORES[@]}" "${TARGETS[@]}"
             rm -rf /tmp/deepspeed-pytest
             run_phase "unit tests (sequential)" -m sequential \
@@ -394,6 +425,7 @@ jobs:
             echo
             echo "- runner: ${SELECTED_RUNNER}"
             echo "- shard: ${SHARD}"
+            echo "- xdist workers: ${PARALLEL}"
             echo "- audit mode: ${AUDIT}"
             if [ "$AUDIT" = "true" ]; then
               echo "- collected test nodes: ${collected}"
