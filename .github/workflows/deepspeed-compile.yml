@@ -67,6 +67,7 @@ jobs:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
     env:
       CONFIG: ${{ github.event.inputs.config || 'both' }}
+      HCCL_NPU_SOCKET_PORT_RANGE: "auto"
 
     steps:
       - name: Checkout

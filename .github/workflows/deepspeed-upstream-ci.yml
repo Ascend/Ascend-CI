@@ -108,6 +108,7 @@ jobs:
     runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}
     env:
       SELECTED_RUNNER: ${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}
+      HCCL_NPU_SOCKET_PORT_RANGE: "auto"
     # NPU jobs must never block PR merges: failures are reported, not enforced.
     # Only relax the gate for PR runs; manual dispatch must surface failures.
     continue-on-error: ${{ github.event_name == 'pull_request' }}
@@ -237,6 +238,7 @@ jobs:
     runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}
     env:
       SELECTED_RUNNER: ${{ github.event.inputs.runner || 'linux-aarch64-a2-1' }}
+      HCCL_NPU_SOCKET_PORT_RANGE: "auto"
     timeout-minutes: 360
     container:
       image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/cann:latest
