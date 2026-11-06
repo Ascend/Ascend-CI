@@ -34,6 +34,11 @@ name: deepspeed-upstream-ci-all
 #     marker filters, drops the known ignores, and reports FAILED/ERROR/SKIPPED
 #     for the whole tests/unit tree. This is much slower and noisier than the
 #     normal run; keep it manual.
+#   - Use `shard` to split that inventory by directory (runtime, v1-core,
+#     v1-moe, v1-zero, misc, ops, inference). `all` keeps the single-job run.
+#   - Each run writes test-stats.json/txt. Sum passed/failed/skipped across
+#     shards to compute NPU pass rates; pass_rate_executed excludes skips, while
+#     pass_rate_all counts every collected test.
 #   - 360 minutes is GitHub's job cap. If the baseline exceeds it, split the run
 #     by test directory into a matrix instead of raising this value.
 
@@ -53,6 +58,20 @@ on:
         type: boolean
         default: false
         description: 'Audit mode: clear pytest.ini marker filters, drop known ignores, and report skipped/unsupported tests (slow)'
+      shard:
+        required: false
+        type: choice
+        options:
+          - all
+          - runtime
+          - v1-core
+          - v1-moe
+          - v1-zero
+          - misc
+          - ops
+          - inference
+        default: 'all'
+        description: 'Directory shard; use one shard per run when a full audit exceeds the 6h job cap'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -70,7 +89,7 @@ defaults:
 
 jobs:
   all-unit-tests:
-    name: deepspeed-upstream-ci-all / all unit tests
+    name: deepspeed-upstream-ci-all / unit tests (${{ github.event.inputs.shard || 'all' }})
     # PORT: upstream, replace with the NPU self-hosted runner labels.
     runs-on: ${{ github.event.inputs.runner || 'linux-aarch64-a2-8' }}
     timeout-minutes: 360
@@ -79,6 +98,7 @@ jobs:
     env:
       SELECTED_RUNNER: ${{ github.event.inputs.runner || 'linux-aarch64-a2-8' }}
       AUDIT: ${{ github.event.inputs.audit || 'false' }}
+      SHARD: ${{ github.event.inputs.shard || 'all' }}
       # DeepSpeed's DistributedTest uses this as the per-test child timeout.
       DS_UNITTEST_TIMEOUT: "300"
 
@@ -197,8 +217,38 @@ jobs:
           : > /tmp/pytest-full.log
 
           AUDIT="${AUDIT:-false}"
+          SHARD="${SHARD:-all}"
           NPU_COUNT=$(python -c "import torch, torch_npu; print(torch.npu.device_count())")
-          echo "Running full unit suite with -n $NPU_COUNT on $NPU_COUNT visible NPUs (audit=$AUDIT)"
+          echo "Running unit suite with -n $NPU_COUNT on $NPU_COUNT visible NPUs (audit=$AUDIT, shard=$SHARD)"
+
+          TARGETS=(unit/)
+          SHARD_IGNORES=()
+          case "$SHARD" in
+            all) ;;
+            runtime) TARGETS=(unit/runtime) ;;
+            v1-core)
+              TARGETS=(unit/v1)
+              SHARD_IGNORES=(--ignore=unit/v1/moe --ignore=unit/v1/zero)
+              ;;
+            v1-moe) TARGETS=(unit/v1/moe) ;;
+            v1-zero) TARGETS=(unit/v1/zero) ;;
+            misc)
+              TARGETS=(
+                unit/checkpoint unit/comm unit/launcher unit/utils unit/linear
+                unit/pipe unit/profiling unit/sequence unit/monitor unit/autotuning
+                unit/accelerator unit/test_multirank_selection.py
+              )
+              ;;
+            ops) TARGETS=(unit/ops unit/compile) ;;
+            inference)
+              TARGETS=(unit/inference unit/module_inject unit/hybrid_engine unit/ulysses_alst)
+              ;;
+            *)
+              echo "unknown shard: $SHARD" >&2
+              exit 2
+              ;;
+          esac
+          echo "shard $SHARD targets: ${TARGETS[*]}"
 
           common=(
             --verbose
@@ -206,6 +256,8 @@ jobs:
             --continue-on-collection-errors
             --basetemp=/tmp/deepspeed-pytest
             -rs
+            --durations=50
+            --durations-min=10
           )
 
           if [ "$AUDIT" = "true" ]; then
@@ -214,7 +266,8 @@ jobs:
             common+=(-o addopts=)
             # Inventory every node id before executing, including collection
             # errors, so the audit has a complete denominator.
-            pytest --collect-only -q --continue-on-collection-errors -o addopts= unit/ \
+            pytest --collect-only -q --continue-on-collection-errors -o addopts= \
+              "${SHARD_IGNORES[@]}" "${TARGETS[@]}" \
               > "$GITHUB_WORKSPACE/all-tests.txt" 2>&1 || true
           else
             common+=(--instafail)
@@ -245,13 +298,17 @@ jobs:
 
           if [ "$AUDIT" = "true" ]; then
             # addopts is cleared above, so partition sequential tests explicitly.
-            run_phase "unit tests (parallel)" -n "$NPU_COUNT" -m "not sequential" "${common[@]}" unit/
+            run_phase "unit tests (parallel)" -n "$NPU_COUNT" -m "not sequential" \
+              "${common[@]}" "${SHARD_IGNORES[@]}" "${TARGETS[@]}"
             rm -rf /tmp/deepspeed-pytest
-            run_phase "unit tests (sequential)" -m sequential "${common[@]}" unit/
+            run_phase "unit tests (sequential)" -m sequential \
+              "${common[@]}" "${SHARD_IGNORES[@]}" "${TARGETS[@]}"
           else
-            run_phase "unit tests (parallel)" -n "$NPU_COUNT" "${common[@]}" unit/
+            run_phase "unit tests (parallel)" -n "$NPU_COUNT" \
+              "${common[@]}" "${SHARD_IGNORES[@]}" "${TARGETS[@]}"
             rm -rf /tmp/deepspeed-pytest
-            run_phase "unit tests (sequential)" -m sequential "${common[@]}" unit/ \
+            run_phase "unit tests (sequential)" -m sequential \
+              "${common[@]}" "${SHARD_IGNORES[@]}" "${TARGETS[@]}" \
               --ignore=unit/ops/deepspeed4science/test_DS4Sci_EvoformerAttention.py
           fi
 
@@ -264,6 +321,69 @@ jobs:
             | sed -E 's/^(\[gw[0-9]+\] )?//' \
             | sort -u > "$GITHUB_WORKSPACE/skipped-tests.txt" || true
 
+          # Sum pytest's terminal summary lines across both phases. This is the
+          # per-shard source of truth for pass/fail/skip/error counts.
+          python - <<'PY'
+          import json
+          import os
+          import re
+
+          text = open('/tmp/pytest-full.log', errors='ignore').read()
+          totals = {k: 0 for k in
+                    ('passed', 'failed', 'errors', 'skipped', 'xfailed', 'xpassed', 'deselected')}
+          summary_lines = 0
+          for line in text.splitlines():
+              stripped = line.strip()
+              if not (stripped.startswith('=') and stripped.endswith('=') and ' in ' in stripped):
+                  continue
+              summary_lines += 1
+              for num, key in re.findall(
+                      r'(\d+) (passed|failed|errors?|skipped|xfailed|xpassed|deselected)\b', stripped):
+                  if key in ('error', 'errors'):
+                      key = 'errors'
+                  totals[key] += int(num)
+
+          workspace = os.environ['GITHUB_WORKSPACE']
+          all_tests = os.path.join(workspace, 'all-tests.txt')
+          collected = 0
+          if os.path.exists(all_tests):
+              collected = sum(1 for line in open(all_tests, errors='ignore') if '::' in line)
+
+          executed = sum(totals[k] for k in ('passed', 'failed', 'errors', 'xfailed', 'xpassed'))
+          strict_executed = totals['passed'] + totals['failed'] + totals['errors']
+          skipped = totals['skipped']
+          if collected <= 0:
+              collected = executed + skipped
+          not_run = max(collected - (executed + skipped), 0)
+          rate_strict = (totals['passed'] / strict_executed * 100) if strict_executed else 0.0
+          rate_executed = (totals['passed'] / executed * 100) if executed else 0.0
+          rate_all = (totals['passed'] / collected * 100) if collected else 0.0
+
+          stats = {
+              **totals,
+              'collected': collected,
+              'executed': executed,
+              'strict_executed': strict_executed,
+              'not_run': not_run,
+              'summary_lines': summary_lines,
+              'pass_rate_strict_pct': round(rate_strict, 2),
+              'pass_rate_executed_pct': round(rate_executed, 2),
+              'pass_rate_all_pct': round(rate_all, 2),
+          }
+          with open(os.path.join(workspace, 'test-stats.json'), 'w') as f:
+              json.dump(stats, f, indent=2, sort_keys=True)
+              f.write('\n')
+          with open(os.path.join(workspace, 'test-stats.txt'), 'w') as f:
+              f.write('passed=%d failed=%d errors=%d skipped=%d xfailed=%d xpassed=%d\n' % (
+                  totals['passed'], totals['failed'], totals['errors'], skipped,
+                  totals['xfailed'], totals['xpassed']))
+              f.write('collected=%d executed=%d strict_executed=%d not_run=%d\n' % (
+                  collected, executed, strict_executed, not_run))
+              f.write('pass_rate_strict=%.2f%% pass_rate_executed=%.2f%% pass_rate_all=%.2f%%\n' % (
+                  rate_strict, rate_executed, rate_all))
+          print(open(os.path.join(workspace, 'test-stats.txt')).read())
+          PY
+
           collected=0
           if [ -s "$GITHUB_WORKSPACE/all-tests.txt" ]; then
             collected=$(grep -c '::' "$GITHUB_WORKSPACE/all-tests.txt" || true)
@@ -273,12 +393,18 @@ jobs:
             echo "## deepspeed-upstream-ci-all"
             echo
             echo "- runner: ${SELECTED_RUNNER}"
+            echo "- shard: ${SHARD}"
             echo "- audit mode: ${AUDIT}"
             if [ "$AUDIT" = "true" ]; then
               echo "- collected test nodes: ${collected}"
             fi
             echo "- failing/error files: $(wc -l < "$GITHUB_WORKSPACE/failing-tests.txt")"
             echo "- skipped entries: $(wc -l < "$GITHUB_WORKSPACE/skipped-tests.txt")"
+            if [ -s "$GITHUB_WORKSPACE/test-stats.txt" ]; then
+              echo
+              echo "### Stats"
+              sed 's/^/- /' "$GITHUB_WORKSPACE/test-stats.txt"
+            fi
             if [ -s "$GITHUB_WORKSPACE/failing-tests.txt" ]; then
               echo
               echo "### Failing/error files"
@@ -300,9 +426,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-inventories
+          name: test-inventories-${{ github.event.inputs.shard || 'all' }}
           path: |
             failing-tests.txt
             skipped-tests.txt
             all-tests.txt
+            test-stats.json
+            test-stats.txt
           if-no-files-found: ignore
