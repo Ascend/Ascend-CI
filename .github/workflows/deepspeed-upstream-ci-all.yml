@@ -194,11 +194,30 @@ jobs:
           pip install .[autotuning]
           ds_report
 
+      - name: Install Ascend Triton
+        run: |
+          # torch_npu's Inductor path needs the Ascend Triton backend installed so
+          # Triton has a registered NPU driver. requirements-dev.txt pulls plain
+          # triton 3.9.x, so pin both packages to the Ascend-compatible pair after
+          # the dev requirements install. Without this, torch.compile tests fail
+          # with "0 active drivers" or KeyError: 'npu', which also masks Muon
+          # failures in the DistributedTest child processes.
+          pip install triton==3.6.0 triton-ascend==3.6.0 \
+              -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple \
+              --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi
+
       - name: Check NPU state
         working-directory: deepspeed
         run: |
           python -c "import torch, torch_npu; print('NPU available:', torch.npu.is_available())"
           python -c "from deepspeed.accelerator import get_accelerator; print('accelerator:', get_accelerator()._name)"
+          python - <<'PY'
+          import torch_npu
+          import triton
+          from triton.runtime import driver
+          print('triton:', triton.__version__)
+          print('triton target:', driver.active.get_current_target())
+          PY
           python - <<'PY'
           import os
           import torch
@@ -319,8 +338,12 @@ jobs:
             label=$1
             shift
             echo "::group::$label"
-            pytest "$@" 2>&1 | tee -a /tmp/pytest-full.log
-            rc=${PIPESTATUS[0]}
+            # This step runs under `bash -el`, so errexit plus `set -o pipefail`
+            # would abort the whole script as soon as pytest reports a failure,
+            # skipping the remaining phase(s). `|| rc=$?` keeps the pipeline
+            # from tripping errexit and still records pytest's exit status.
+            rc=0
+            pytest "$@" 2>&1 | tee -a /tmp/pytest-full.log || rc=$?
             if [ "$rc" -ne 0 ]; then
               status=1
             fi
@@ -408,8 +431,8 @@ jobs:
               f.write('passed=%d failed=%d errors=%d skipped=%d xfailed=%d xpassed=%d\n' % (
                   totals['passed'], totals['failed'], totals['errors'], skipped,
                   totals['xfailed'], totals['xpassed']))
-              f.write('collected=%d executed=%d strict_executed=%d not_run=%d\n' % (
-                  collected, executed, strict_executed, not_run))
+              f.write('collected=%d executed=%d strict_executed=%d not_run=%d phases=%d\n' % (
+                  collected, executed, strict_executed, not_run, summary_lines))
               f.write('pass_rate_strict=%.2f%% pass_rate_executed=%.2f%% pass_rate_all=%.2f%%\n' % (
                   rate_strict, rate_executed, rate_all))
           print(open(os.path.join(workspace, 'test-stats.txt')).read())
