@@ -131,7 +131,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y \
-              git gcc g++ make cmake ninja-build python-is-python3 python3-pip
+              git gcc g++ make cmake ninja-build python-is-python3 python3-pip wget
 
       - name: Check container state
         run: |
@@ -195,6 +195,8 @@ jobs:
           ds_report
 
       - name: Install Ascend Triton
+        env:
+          TRITON_ASCEND_VERSION: "3.6.0"
         run: |
           # torch_npu's Inductor path needs the Ascend Triton backend installed so
           # Triton has a registered NPU driver. requirements-dev.txt pulls plain
@@ -202,9 +204,37 @@ jobs:
           # the dev requirements install. Without this, torch.compile tests fail
           # with "0 active drivers" or KeyError: 'npu', which also masks Muon
           # failures in the DistributedTest child processes.
-          pip install triton==3.6.0 triton-ascend==3.6.0 \
-              -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple \
-              --extra-index-url=https://mirrors.huaweicloud.com/ascend/repos/pypi
+          #
+          # triton-ascend is only published on the Huawei Ascend index, and its
+          # ~323 MB aarch64 wheel is intermittently slow or drops the connection
+          # mid-transfer (pip's IncompleteRead). Download it with wget -c so HTTP
+          # range resume keeps the bytes already fetched; pip cannot restart the
+          # same transfer reliably. The wheel is left in /tmp for retries within
+          # the same job.
+          PY_TAG="cp$(python -c 'import sys; print(f"{sys.version_info.major}{sys.version_info.minor}")')"
+          WHEEL="triton_ascend-${TRITON_ASCEND_VERSION}-${PY_TAG}-${PY_TAG}-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl"
+          URL="https://mirrors.huaweicloud.com/ascend/repos/pypi/triton-ascend/${WHEEL}"
+          WHEEL_DIR=/tmp/ascend-triton-wheels
+          mkdir -p "$WHEEL_DIR"
+
+          wget -c --tries=100 --timeout=120 --waitretry=10 \
+              -O "$WHEEL_DIR/$WHEEL" "$URL"
+
+          # Plain triton comes from the fast tuna mirror; the local wheel is then
+          # installed with dependencies (triton-ascend pins numpy/scipy/xdist,
+          # which also brings the tested npu-inductor environment in line).
+          pip install triton==${TRITON_ASCEND_VERSION} \
+              -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+          pip install "$WHEEL_DIR/$WHEEL"
+
+          python - <<'PY'
+          import numpy
+          import pytest
+          import triton
+          print('triton:', triton.__version__)
+          print('numpy:', numpy.__version__)
+          print('pytest:', pytest.__version__)
+          PY
 
       - name: Check NPU state
         working-directory: deepspeed
