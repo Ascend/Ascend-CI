@@ -6,9 +6,11 @@ on:
       - main
     paths:
       - ".github/workflows/transformers.yml"
+      - ".github/npu_xdist.py"
   pull_request:
     paths:
       - ".github/workflows/transformers.yml"
+      - ".github/npu_xdist.py"
   workflow_dispatch:
     inputs:
       runner:
@@ -105,46 +107,13 @@ jobs:
         NPUS="${RUNNER_LABEL##*-}"
         [[ "$NPUS" =~ ^[0-9]+$ ]] || NPUS=2
         export ASCEND_RT_VISIBLE_DEVICES="$(python3 -c "print(','.join(map(str, range($NPUS))))")"
-        # xdist workers stay up. Drop a leftover default process group so the
-        # next test does not hit "trying to initialize the default process group twice".
-        printf '%s\n' \
-          'import os' \
-          'import pytest' \
-          '_worker = os.environ.get("PYTEST_XDIST_WORKER")' \
-          'if _worker and _worker.startswith("gw"):' \
-          '    os.environ["ASCEND_RT_VISIBLE_DEVICES"] = _worker[2:]' \
-          'def _export_triton_key():' \
-          '    try:' \
-          '        import triton.compiler.compiler as compiler' \
-          '        if not hasattr(compiler, "triton_key"):' \
-          '            from triton.runtime.cache import triton_key' \
-          '            compiler.triton_key = triton_key' \
-          '    except Exception:' \
-          '        return' \
-          'def _destroy_default_process_group():' \
-          '    try:' \
-          '        import torch.distributed as dist' \
-          '        if dist.is_available() and dist.is_initialized():' \
-          '            dist.destroy_process_group()' \
-          '    except Exception:' \
-          '        return' \
-          '_export_triton_key()' \
-          '@pytest.hookimpl(hookwrapper=True, tryfirst=True)' \
-          'def pytest_runtest_setup(item):' \
-          '    _destroy_default_process_group()' \
-          '    yield' \
-          '@pytest.hookimpl(hookwrapper=True, trylast=True)' \
-          'def pytest_runtest_teardown(item):' \
-          '    yield' \
-          '    _destroy_default_process_group()' \
-          > /tmp/transformers_npu_xdist.py
-        export PYTHONPATH=/tmp${PYTHONPATH:+:$PYTHONPATH}
+        export PYTHONPATH="${GITHUB_WORKSPACE}/.github${PYTHONPATH:+:$PYTHONPATH}"
         XDIST=()
         if [ "$NPUS" -gt 1 ]; then
           XDIST=(-n "$NPUS" --dist load)
         fi
         source "${ASCEND_TOOLKIT_HOME}/set_env.sh"
-        python -m pytest "${XDIST[@]}" -p transformers_npu_xdist tests \
+        python -m pytest "${XDIST[@]}" -p npu_xdist tests \
           --ignore=tests/conftest_tests \
           --ignore=tests/fixtures \
           --ignore=tests/quantization \
